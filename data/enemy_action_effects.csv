@@ -1,0 +1,12 @@
+action_id,order,kind,damage_model,element,power,multiplier,defense_ratio,status_id,status_chance,restore_ratio,restore_flat,duration_steps,requires_previous_hit
+attack,1,DAMAGE,PHYSICAL,physical,0,1.0,1.0,,0,0,0,0,false
+bite,1,DAMAGE,PHYSICAL,physical,0,1.3,1.0,,0,0,0,0,false
+heavy,1,DAMAGE,PHYSICAL,physical,0,1.5,1.0,,0,0,0,0,false
+poison_hit,1,DAMAGE,PHYSICAL,physical,0,0.8,1.0,,0,0,0,0,false
+poison_hit,2,APPLY_STATUS,NONE,none,0,1.0,1.0,poison,0.50,0,0,0,true
+sleep_wave,1,APPLY_STATUS,NONE,none,0,1.0,1.0,sleep,0.60,0,0,0,false
+ember,1,DAMAGE,MAGICAL,fire,8,1.0,1.0,,0,0,0,0,false
+frost,1,DAMAGE,MAGICAL,ice,16,1.0,1.0,,0,0,0,0,false
+quake,1,DAMAGE,PHYSICAL,physical,0,0.65,1.0,,0,0,0,0,false
+storm,1,DAMAGE,MAGICAL,lightning,15,1.0,1.0,,0,0,0,0,false
+focus,1,NO_OP,NONE,none,0,1.0,1.0,,0,0,0,0,false

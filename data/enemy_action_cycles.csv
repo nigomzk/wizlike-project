@@ -1,0 +1,10 @@
+enemy_id,turn_index,action_id
+gatekeeper,1,attack
+gatekeeper,2,heavy
+gatekeeper,3,focus
+gatekeeper,4,quake
+labyrinth_lord,1,attack
+labyrinth_lord,2,storm
+labyrinth_lord,3,poison_hit
+labyrinth_lord,4,focus
+labyrinth_lord,5,quake

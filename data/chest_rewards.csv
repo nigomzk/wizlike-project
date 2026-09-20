@@ -1,0 +1,13 @@
+event_id,gold,item_id,quantity
+ruins_f1_chest_a,0,herb,3
+ruins_f1_chest_b,80,,0
+ruins_f2_chest_a,0,ether,2
+ruins_f2_chest_b,0,sword_2,1
+ruins_f3_chest_a,0,return_thread,2
+ruins_f3_chest_b,180,,0
+depths_f1_chest_a,0,potion,3
+depths_f1_chest_b,250,,0
+depths_f2_chest_a,0,ether,3
+depths_f2_chest_b,0,guard_charm,1
+depths_f3_chest_a,0,potion,4
+depths_f3_chest_b,400,,0

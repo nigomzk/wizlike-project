@@ -1,0 +1,4 @@
+tier,unlock_kind,unlock_target_id
+A,always,
+B,floor_visited,ruins_f2
+C,boss_first_defeated,gatekeeper

@@ -1,0 +1,7 @@
+id,title,unlock_kind,unlock_target_id,kind,target_id,target_count,reward_exp,reward_gold,reward_item_id,reward_item_quantity
+q_slime,街道の粘液退治,always,,kill,slime,6,160,100,herb,3
+q_wings,薬師の頼み,always,,deliver,bat_wing,3,200,140,antidote,3
+q_wolves,遺跡の狼,floor_visited,ruins_f2,kill,wolf,5,360,220,ether,2
+q_crystals,魔晶石の調査,boss_first_defeated,gatekeeper,deliver,crystal,4,600,350,return_thread,2
+q_red_wolves,紅狼の脅威,warp_unlocked,warp_depths,kill,red_wolf,5,800,450,potion,3
+q_sentinels,深層の安全確保,floor_visited,depths_f2,kill,sentinel,4,1200,700,ether,4

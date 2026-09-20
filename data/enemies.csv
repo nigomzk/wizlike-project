@@ -1,0 +1,15 @@
+id,name,hp,attack,defense,tec,agi,luc,exp,gold,drop_item_id,drop_chance,action_mode,is_boss
+slime,スライム,25,8,3,3,3,3,24,10,slime_gel,0.50,weighted,false
+bat,洞窟コウモリ,22,9,3,5,10,4,28,12,bat_wing,0.50,weighted,false
+wolf,灰狼,44,14,7,7,12,6,45,18,wolf_fang,0.50,weighted,false
+poison_slime,毒スライム,40,12,6,8,5,9,42,18,slime_gel,0.60,weighted,false
+stone_guard,石の番兵,76,22,18,8,6,7,90,35,crystal,0.30,weighted,false
+cave_mage,洞窟の術師,55,15,9,17,10,12,85,32,ether,0.15,weighted,false
+crystal_bat,水晶コウモリ,75,25,14,18,25,16,120,45,bat_wing,0.65,weighted,false
+red_wolf,紅狼,100,30,17,16,24,14,140,50,wolf_fang,0.65,weighted,false
+iron_guard,鉄の番兵,145,38,30,20,14,18,220,75,crystal,0.60,weighted,false
+frost_mage,氷の術師,100,24,18,31,21,22,200,70,ether,0.20,weighted,false
+shade,迷宮の影,140,37,23,33,35,30,300,95,crystal,0.70,weighted,false
+sentinel,深層の守衛,200,46,35,28,22,24,340,110,crystal,0.75,weighted,false
+gatekeeper,遺跡の門番,700,30,22,17,12,14,1600,700,ether,1.00,cycle,true
+labyrinth_lord,迷宮の主,2000,58,42,40,30,32,4000,1800,ether,1.00,cycle,true

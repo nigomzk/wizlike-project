@@ -1,0 +1,11 @@
+id,name,target,priority,always_hit
+attack,攻撃,LIVING_ALLY,0,false
+bite,かみつき,LIVING_ALLY,0,false
+heavy,強打,LIVING_ALLY,0,false
+poison_hit,毒の一撃,LIVING_ALLY,0,false
+sleep_wave,眠りの波動,LIVING_ALLY,0,true
+ember,火の粉,LIVING_ALLY,0,true
+frost,氷結,LIVING_ALLY,0,true
+quake,地鳴り,ALL_LIVING_ALLIES,0,false
+storm,雷嵐,ALL_LIVING_ALLIES,0,true
+focus,力をためる,SELF,0,true

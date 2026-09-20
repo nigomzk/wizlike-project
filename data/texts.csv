@@ -1,0 +1,14 @@
+id,text
+intro,街の外れに眠る遺跡で、奥へ続く道が見つかった。ギルドに仲間を登録し、迷宮の最深部を目指そう。
+boss_gatekeeper_pre,石の門番が道をふさいでいる。
+boss_gatekeeper_first,門番は崩れ落ちた。奥には水晶に覆われた迷宮が続いている。
+boss_gatekeeper_repeat,門番を倒した。
+boss_labyrinth_lord_pre,迷宮の主が姿を現した。
+ending,迷宮の主を倒し、街に静けさが戻った。あなたたちの踏査は、ギルドの記録に刻まれる。
+clear_notice,クリアしました。街でセーブすると記録されます。
+insc_ruins_f1,帰還の糸を忘れるな
+insc_ruins_f2,近道は反対側から開く
+insc_ruins_f3,雷は石を砕く
+insc_depths_f1,魔法陣は街につながる
+insc_depths_f2,氷の術師は火に弱い
+insc_depths_f3,力をためた敵には防御を

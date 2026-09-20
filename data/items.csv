@@ -1,0 +1,10 @@
+id,name,kind,max_stack,buy_price,sell_price,shop_tier,target,contexts
+herb,薬草,consumable,9,20,10,A,LIVING_ALLY,battle|town|exploration
+potion,上薬草,consumable,9,60,30,C,LIVING_ALLY,battle|town|exploration
+ether,霊水,consumable,9,80,40,A,LIVING_ALLY,battle|town|exploration
+antidote,解毒薬,consumable,9,15,7,A,LIVING_ALLY,battle|town|exploration
+return_thread,帰還の糸,consumable,9,40,20,A,PARTY,exploration
+slime_gel,粘液,material,9,-1,5,,,
+bat_wing,コウモリの羽,material,9,-1,8,,,
+wolf_fang,狼の牙,material,9,-1,12,,,
+crystal,魔晶石,material,9,-1,20,,,

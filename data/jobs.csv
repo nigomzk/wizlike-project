@@ -1,0 +1,6 @@
+id,name,base_hp,base_sp,base_str,base_vit,base_tec,base_agi,base_luc,fixed_hp,fixed_sp,fixed_str,fixed_vit,fixed_tec,fixed_agi,fixed_luc,chance_hp,chance_sp,chance_str,chance_vit,chance_tec,chance_agi,chance_luc,starting_weapon_id,starting_armor_id,initial_skill_id,weapon_category
+warrior,戦士,46,12,12,8,6,7,6,5,1,2,1,1,1,1,0.70,0.20,0.70,0.40,0.20,0.40,0.30,sword_1,cloth,power_slash,sword
+knight,騎士,54,14,9,12,5,4,6,6,1,1,2,1,1,1,0.80,0.30,0.50,0.80,0.20,0.10,0.30,spear_1,cloth,cover,spear
+mage,魔術師,30,26,4,4,13,7,8,3,3,1,1,2,1,1,0.30,0.80,0.10,0.10,0.80,0.40,0.50,staff_1,cloth,fire,staff
+priest,僧侶,36,24,6,6,11,5,9,4,3,1,1,2,1,1,0.50,0.60,0.20,0.30,0.60,0.20,0.60,staff_1,cloth,heal,staff
+scout,斥候,38,18,8,6,9,12,11,4,2,1,1,1,2,2,0.40,0.50,0.60,0.20,0.50,0.80,0.70,dagger_1,cloth,venom_edge,dagger
