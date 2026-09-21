@@ -45,7 +45,7 @@
 | 接頭辞 | 領域 | 定義の所在 |
 | --- | --- | --- |
 | D | データとマップのコンパイル | `tech/data-model.md`（D01, D03）、`tech/map-authoring.md`（D02, D04） |
-| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL05） |
+| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL06） |
 | F | 施設・経済・日数・ボス復活 | `spec/20-town.md`（F01〜F07） |
 | G | 冒険者の登録と編成 | `spec/30-party.md`（G01〜G05） |
 | L | 経験値と成長 | `spec/30-party.md`（L01〜L03） |
@@ -57,7 +57,7 @@
 | S | セーブとロード | `spec/70-save.md`（S01〜S06） |
 | W | Windows実機・手動 | `tech/presentation.md`（W01〜W08） |
 
-自動検証は D, FL, F, G, L, P, I, E, B, Q, S の計64件。手動検証は W の8件。
+自動検証は D, FL, F, G, L, P, I, E, B, Q, S の計65件。手動検証は W の8件。
 
 ---
 
