@@ -36,7 +36,6 @@ Godot 4.5.1 / GDScript で制作する、Windows 11向けの1人用ダンジョ�
 | 16 | [../data/README.md](../data/README.md) | 数値・ID・文章の唯一の正。CSVの一覧と記法 |
 | 17 | [plan/milestones.md](plan/milestones.md) | M0〜M7、依存関係、Issueの共通要件 |
 | 18 | [decisions/log.md](decisions/log.md) | 決定記録。なぜこの仕様になったか |
-| 19 | [plan/traceability.md](plan/traceability.md) | 文書構成を切り直した際の対応表 |
 
 ---
 
