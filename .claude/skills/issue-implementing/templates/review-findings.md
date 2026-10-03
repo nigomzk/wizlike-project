@@ -22,7 +22,7 @@
 | --- | --- |
 | 指摘ID | エージェントごとの接頭辞＋2桁の連番。`SPEC-01`（spec-conformance-reviewer）、`TEST-01`（test-reviewer）、`ARCH-01`（architecture-reviewer）、`SCRN-01`（screen-reviewer）。ラウンドをまたいで番号を振り直してよい |
 | 重大度 | `criteria/severity.md` に従う |
-| 根拠 | 重大度に必要な根拠の種類を満たす。`file:line` は差分の中の位置ではなく、リポジトリ上の位置で書く |
+| 根拠 | 重大度に必要な根拠の種類を満たす。`file:line` は差分の中の位置ではなく、リポジトリ上の位置で書く。ID一覧の下書きへの指摘は `id-table.md:<行>` と書く |
 | 指摘内容 | 事実と、それが根拠に反する理由。推測で書く場合は「未確認」と明記する |
 | 修正案 | 具体的に。Issueの範囲を超える修正が必要な場合は、そう書く |
 

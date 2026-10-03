@@ -28,6 +28,7 @@
 | テスト：実装後 | <.../cycle-<c>/test-green.log> |
 | テスト：このラウンドの直前 | <.../round-<r>/test-latest.log> |
 | Context7の調査ログ | <.../context7-log.md> |
+| ID一覧の下書き | <.../round-<r>/id-table.md> |
 | 出力の型 | .claude/skills/issue-implementing/templates/review-findings.md |
 | 重大度の基準 | .claude/skills/issue-implementing/criteria/severity.md |
 | Context7の運用 | .claude/skills/issue-implementing/criteria/context7.md |
