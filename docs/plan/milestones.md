@@ -10,7 +10,7 @@ Issueを置くための段階と、全Issueに共通する要件を定義する�
 
 | 段階 | 名前 | 主な内容 | 完了条件（受入ID） |
 | --- | --- | --- | --- |
-| A | 起動 | `project.godot`（Godot 4.5.1固定）、ディレクトリ雛形、`main.tscn` の骨格、テスト基盤、Noto Sans JPと `THIRD_PARTY_NOTICES.md`、`GameFlow` の骨格、開発中の仮画面（PRS-208）、タイトル、設定 | T01〜T03, A01, FL07, U03〜U05 |
+| A | 起動 | `project.godot`（Godot 4.5.1固定）、ディレクトリ雛形、`main.tscn` の骨格、テスト基盤、Noto Sans JPと `THIRD_PARTY_NOTICES.md`、`GameFlow` の骨格、開発中の仮画面（PRS-208）、タイトル、設定 | T01〜T04, A01, FL07, U03〜U05 |
 | B | データ | 定義Resource型、`data/` のCSVの読込、バリデータ、起動不可のエラー画面 | D01, D03, U07 |
 | C | 街とギルド | `GameSession` と `RngService`、ニューゲーム、街、共通UI部品、仮の顔画像と街の背景、ギルド、`InventoryRules` と能力値の算出、メニューの骨格・能力・装備 | A02〜A05, F07, F08, G01〜G05, P01, I01, I02, I05, I06, I08, FL06, FL08, U01, U02, U06, U08, U11, U13〜U15, U16（習得できない理由の表示まで）, U27, U34（死亡・毒の表示を除く）, U35 |
 | D | セーブ | `SaveService`、セーブ・ロード画面、つづきから、未保存の確認 | S01〜S06, FL01, U12, U23, U24 |

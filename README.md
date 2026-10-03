@@ -32,7 +32,7 @@ $env:GODOT = "<Godot 4.5.1 の実行ファイル>"
 段階やIssueの完了判定では、その範囲の受入IDを `--require` に指定する。指定したIDが成功以外（失敗またはスキップ）なら、終了コードは非0になる。
 
 ```powershell
-& $env:GODOT --headless --path . --script tests/run_all.gd -- --require=T01,T02,T03,A01; $LASTEXITCODE
+& $env:GODOT --headless --path . --script tests/run_all.gd -- --require=T01,T02,T03,T04,A01; $LASTEXITCODE
 ```
 
 | 結果 | 終了コード |
@@ -44,7 +44,7 @@ $env:GODOT = "<Godot 4.5.1 の実行ファイル>"
 - 失敗したテストのID、期待値、実測値は標準出力に出る
 - 初回の `--import` は不要。`.godot/` を削除した状態からも、そのまま完走する
 - テストはエディターを起動しない
-- `-- --files=res://a.gd,res://b.gd` で、実行するテストファイルを差し替えられる（TST-109）。ランナーの検証（T01〜T03）が、`tests/fixtures/` のフィクスチャを子プロセスで実行するために使う
+- `-- --files=res://a.gd,res://b.gd` で、実行するテストファイルを差し替えられる（TST-109）。ランナーの検証（T01〜T04）が、`tests/fixtures/` のフィクスチャを子プロセスで実行するために使う
 
 ## 版
 
