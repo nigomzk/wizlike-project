@@ -27,7 +27,7 @@
 | ARC | `tech/architecture.md` | 構成・責務 |
 | DAT | `tech/data-model.md` | データ型・状態モデル |
 | MAP | `tech/map-authoring.md` | マップ制作・3D生成 |
-| PRS | `tech/presentation.md` | 画面・入力・素材 |
+| PRS | `tech/presentation.md`、`spec/screens/`（PRS-2xxのみ） | 画面・入力・素材 |
 | TST | `tech/testing.md` | テスト基盤 |
 
 ---

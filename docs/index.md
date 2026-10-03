@@ -22,20 +22,21 @@ Godot 4.5.1 / GDScript で制作する、Windows 11向けの1人用ダンジョ�
 | 8 | [spec/50-battle.md](spec/50-battle.md) | ターン進行、計算式、状態異常、逃走、報酬 |
 | 9 | [spec/60-quest.md](spec/60-quest.md) | クエストの状態、進捗、報告 |
 | 10 | [spec/70-save.md](spec/70-save.md) | セーブ形式、保存手順、読込検証、障害対応 |
+| 11 | [spec/screens/README.md](spec/screens/README.md) | 画面ごとの遷移・表示・操作・文言・手動確認。**画面を実装するIssueはここから読む** |
 
 | # | 文書 | 内容 |
 | --- | --- | --- |
-| 11 | [tech/architecture.md](tech/architecture.md) | 技術基盤、ディレクトリ、シーン構成、責務、サービス契約 |
-| 12 | [tech/data-model.md](tech/data-model.md) | 定義Resource型、可変状態モデル、バリデータ |
-| 13 | [tech/map-authoring.md](tech/map-authoring.md) | TileMapLayerの編集規約、コンパイル検証、3D生成、仮マップ |
-| 14 | [tech/presentation.md](tech/presentation.md) | 解像度、キー割り当て、画面、演出、素材、フォント |
-| 15 | [tech/testing.md](tech/testing.md) | テストの実行方法、注入点、受け入れ条件IDの索引 |
+| 12 | [tech/architecture.md](tech/architecture.md) | 技術基盤、ディレクトリ、シーン構成、責務、サービス契約 |
+| 13 | [tech/data-model.md](tech/data-model.md) | 定義Resource型、可変状態モデル、バリデータ |
+| 14 | [tech/map-authoring.md](tech/map-authoring.md) | TileMapLayerの編集規約、コンパイル検証、3D生成、仮マップ |
+| 15 | [tech/presentation.md](tech/presentation.md) | 解像度、キー割り当て、演出、設定、素材、フォント（全画面に共通するもの） |
+| 16 | [tech/testing.md](tech/testing.md) | テストの実行方法、注入点、受け入れ条件IDの索引 |
 
 | # | 文書 | 内容 |
 | --- | --- | --- |
-| 16 | [../data/README.md](../data/README.md) | 数値・ID・文章の唯一の正。CSVの一覧と記法 |
-| 17 | [plan/milestones.md](plan/milestones.md) | M0〜M7、依存関係、Issueの共通要件 |
-| 18 | [decisions/log.md](decisions/log.md) | 決定記録。なぜこの仕様になったか |
+| 17 | [../data/README.md](../data/README.md) | 数値・ID・文章の唯一の正。CSVの一覧と記法 |
+| 18 | [plan/milestones.md](plan/milestones.md) | M0〜M7、依存関係、Issueの共通要件 |
+| 19 | [decisions/log.md](decisions/log.md) | 決定記録。なぜこの仕様になったか |
 
 ---
 

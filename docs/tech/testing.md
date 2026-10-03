@@ -8,7 +8,7 @@
 
 | ID | 規則 |
 | --- | --- |
-| TST-000 | ルールの境界はヘッドレスのGDScriptテストで検証する。描画・入力・配布はWindows実機で検証する。 |
+| TST-000 | ルールの境界はヘッドレスのGDScriptテストで検証する。描画・入力は画面ごとの手動確認（U）、配布と通しのプレイはWindows実機（W）で検証する。 |
 | TST-001 | テストの入口を `godot --headless --path . --script tests/run_all.gd` とする。 |
 | TST-002 | `run_all.gd` は `SceneTree` を継承し、全テストの完了後に終了コードを指定して `quit()` する。 |
 | TST-003 | 失敗が1件でもあれば終了コードを非0とする。全件成功でのみ0を返す。 |
@@ -45,7 +45,7 @@
 | 接頭辞 | 領域 | 定義の所在 |
 | --- | --- | --- |
 | D | データとマップのコンパイル | `tech/data-model.md`（D01, D03）、`tech/map-authoring.md`（D02, D04） |
-| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL04, FL06。FL05は欠番） |
+| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL04, FL06, FL07。FL05は欠番） |
 | F | 施設・経済・日数・ボス復活 | `spec/20-town.md`（F01〜F07） |
 | G | 冒険者の登録と編成 | `spec/30-party.md`（G01〜G05） |
 | L | 経験値と成長 | `spec/30-party.md`（L01〜L03） |
@@ -55,9 +55,10 @@
 | B | 戦闘 | `spec/50-battle.md`（B01〜B10） |
 | Q | クエスト | `spec/60-quest.md`（Q01〜Q07） |
 | S | セーブとロード | `spec/70-save.md`（S01〜S06） |
-| W | Windows実機・手動 | `tech/presentation.md`（W01〜W08） |
+| W | Windows実機・手動（通し試験） | `tech/presentation.md`（W01〜W08） |
+| U | 画面ごとの手動確認 | `spec/screens/` の各画面文書（U01〜U33） |
 
-自動検証は D, FL, F, G, L, P, I, E, B, Q, S の計65件。手動検証は W の8件。
+自動検証は D, FL, F, G, L, P, I, E, B, Q, S の計65件。手動検証は W の8件と U の33件。
 
 ---
 
