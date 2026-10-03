@@ -1,17 +1,23 @@
 extends RefCounted
 ## TST-408: テスト基盤（T）のテスト。フィクスチャを子プロセスの Godot で実行し、終了コードと出力を判定する。
 
-const IDS := ["T01", "T02", "T03"]
+const IDS := ["T01", "T02", "T03", "T04"]
 
 const FIXTURE_PASS := "res://tests/fixtures/fixture_pass.gd"
 const FIXTURE_FAIL := "res://tests/fixtures/fixture_fail.gd"
 const FIXTURE_SKIP := "res://tests/fixtures/fixture_skip.gd"
+const FIXTURE_CRASH := "res://tests/fixtures/fixture_crash.gd"
+const FIXTURE_CRASH_NESTED := "res://tests/fixtures/fixture_crash_nested.gd"
+const FIXTURE_COMPLETE := "res://tests/fixtures/fixture_complete.gd"
+const FIXTURE_CRASH_SKIP := "res://tests/fixtures/fixture_crash_skip.gd"
+const FIXTURE_PUSH_ERROR := "res://tests/fixtures/fixture_push_error.gd"
 
 
 func run(t) -> void:
 	_t01(t)
 	_t02(t)
 	_t03(t)
+	_t04(t)
 
 
 ## 子プロセスの Godot で run_all.gd を実行する。`{exit_code, output}` を返す。
@@ -66,3 +72,51 @@ func _t03(t) -> void:
 	# 成功したIDを指定した場合は0のまま
 	var required_pass := _run_child(FIXTURE_SKIP, ["--require=X01"])
 	t.check("T03", 0, required_pass.exit_code)
+
+
+# T04: 実行時エラーで打ち切られるフィクスチャを実行する（TST-003, 006, 007）
+func _t04(t) -> void:
+	for fixture in [FIXTURE_CRASH, FIXTURE_CRASH_NESTED]:
+		# --require 付き
+		var required := _run_child(fixture, ["--require=X01,X02"])
+		t.check("T04", true, _is_failure_exit(required.exit_code))
+		t.check("T04", true, "SUMMARY" in required.output)
+		# --require なしでも非0。失敗したIDと打ち切りの旨が出る
+		var plain := _run_child(fixture)
+		t.check("T04", true, _is_failure_exit(plain.exit_code))
+		t.check("T04", true, "SUMMARY" in plain.output)
+		t.check("T04", true, "ABORT" in plain.output)
+		# 1回でも check が成功したIDも、実行されなかったIDも、成功にも未実装のスキップにもならない
+		for id in ["X01", "X02", "X03"]:
+			t.check("T04", true, ("FAIL " + id) in plain.output)
+		t.check("T04", true, "passed=0 failed=3 skipped=0" in plain.output)
+
+	# 打ち切られたファイルは、ほかのファイルの判定を止めない
+	var mixed := _run_child("%s,%s" % [FIXTURE_CRASH, FIXTURE_COMPLETE])
+	t.check("T04", true, _is_failure_exit(mixed.exit_code))
+	t.check("T04", true, "passed=1 failed=3 skipped=0" in mixed.output)
+	t.check("T04", false, "FAIL Y01" in mixed.output)
+	# 打ち切られたファイルが後ろにあっても、前の完走ファイルは成功のまま
+	var reversed := _run_child("%s,%s" % [FIXTURE_COMPLETE, FIXTURE_CRASH_NESTED])
+	t.check("T04", true, _is_failure_exit(reversed.exit_code))
+	t.check("T04", true, "passed=1 failed=3 skipped=0" in reversed.output)
+
+	# 明示的に skip() されたIDは、打ち切られてもスキップのまま。ほかのIDは失敗になる
+	var skipped_then_crash := _run_child(FIXTURE_CRASH_SKIP)
+	t.check("T04", true, _is_failure_exit(skipped_then_crash.exit_code))
+	t.check("T04", true, "SKIP X01" in skipped_then_crash.output)
+	t.check("T04", false, "FAIL X01" in skipped_then_crash.output)
+	t.check("T04", true, "FAIL X02" in skipped_then_crash.output)
+	t.check("T04", true, "FAIL X03" in skipped_then_crash.output)
+	t.check("T04", true, "passed=0 failed=2 skipped=1" in skipped_then_crash.output)
+
+	# push_error と push_warning は打ち切りとして扱わない
+	var pushed := _run_child(FIXTURE_PUSH_ERROR)
+	t.check("T04", 0, pushed.exit_code)
+	t.check("T04", false, "ABORT" in pushed.output)
+	t.check("T04", true, "passed=1 failed=0 skipped=0" in pushed.output)
+
+
+## 終了コードが、失敗（非0）として正しく返されたか。0でも、プロセスの起動失敗（-1）でもない
+func _is_failure_exit(exit_code: int) -> bool:
+	return exit_code != 0 and exit_code != -1
