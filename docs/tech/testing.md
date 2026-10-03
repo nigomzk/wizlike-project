@@ -70,8 +70,10 @@
 | TST-401 | `tests/test_growth.gd` | G, L, P |
 | TST-402 | `tests/test_inventory.gd` | I |
 | TST-403 | `tests/test_battle.gd` | B |
-| TST-404 | `tests/test_save.gd` | S, FL |
-| TST-405 | `tests/test_facility.gd` | F, Q, E |
+| TST-404 | `tests/test_save.gd` | S |
+| TST-405 | `tests/test_facility.gd` | F, Q |
+| TST-406 | `tests/test_flow.gd` | FL |
+| TST-407 | `tests/test_exploration.gd` | E |
 
 | ID | 規則 |
 | --- | --- |

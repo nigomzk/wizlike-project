@@ -8,7 +8,7 @@ Godotプロジェクトの構成、シーンとスクリプトの責務、サー
 | --- | --- |
 | データ型と可変状態モデル | `tech/data-model.md` |
 | マップの制作規約と3D生成 | `tech/map-authoring.md` |
-| 画面のレイアウトと入力 | `tech/presentation.md` |
+| 画面のレイアウトと入力 | `tech/presentation.md`、`spec/screens/`（画面ごとの構成） |
 | テストの実行方法 | `tech/testing.md` |
 | 実装の順序 | `plan/milestones.md` |
 
@@ -48,8 +48,11 @@ project.godot
 export_presets.cfg
 scenes/
   main.tscn
-  ui/{title,town,guild,temple,shop,inn,tavern,menu,save_slots}.tscn
-  ui/{battle,reward,game_over,ending,confirm_dialog}.tscn
+  ui/{title,settings,boot_error,text_screen,town,departure,save_slots}.tscn
+  ui/{guild,temple,shop,inn,tavern}.tscn
+  ui/{menu,inventory,equipment,map}.tscn
+  ui/{battle,reward}.tscn
+  ui/components/（共通UI部品。確認ダイアログを含む）
   dungeon/{dungeon_view,minimap}.tscn
   floors/{ruins_f1,ruins_f2,ruins_f3,depths_f1,depths_f2,depths_f3}.tscn
 scripts/
@@ -65,7 +68,8 @@ assets/
   portraits/ enemies/ backgrounds/ tiles/ audio/ fonts/
 tests/
   run_all.gd
-  test_growth.gd test_battle.gd test_inventory.gd test_save.gd test_maps.gd
+  test_maps.gd test_growth.gd test_inventory.gd test_battle.gd test_save.gd
+  test_facility.gd test_flow.gd test_exploration.gd
 docs/
 plan/
 THIRD_PARTY_NOTICES.md
@@ -113,7 +117,7 @@ README.md
 | --- | --- |
 | ARC-400 | サービスの結果を `{ok: bool, error_code: StringName, changes: Dictionary}` の形式で返す。 |
 | ARC-401 | 代表的なエラーコードは `NO_GOLD`、`NO_SPACE`、`INVALID_TARGET`、`PARTY_EMPTY`、`NO_LIVING_MEMBER`、`ALREADY_LEARNED`、`LOCKED`、`INVALID_SAVE` とする。 |
-| ARC-402 | エラーコードの日本語への翻訳はUI側で行う。サービスは表示文言を持たない。 |
+| ARC-402 | エラーコードの日本語への翻訳はUI側で行い、`data/texts.csv` の `error_` + エラーコードの小文字を表示する。サービスは表示文言を持たない。 |
 | ARC-403 | 失敗した操作は副作用を一切残さない（TWN-101）。 |
 | ARC-404 | 乱数はサービスが内部で生成せず、`RngService` から系列を指定して取得する（GLS-2xx）。 |
 
