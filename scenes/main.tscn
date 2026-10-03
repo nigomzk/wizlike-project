@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[node name="Main" type="Node"]
+
+[node name="GameFlow" type="Node" parent="."]
+
+[node name="ScreenHost" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DungeonHost" type="Node3D" parent="."]
+
+[node name="ModalHost" type="CanvasLayer" parent="."]
+
+[node name="AudioHost" type="Node" parent="."]

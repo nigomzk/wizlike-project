@@ -71,6 +71,7 @@ tests/
   test_maps.gd test_growth.gd test_inventory.gd test_battle.gd test_save.gd
   test_facility.gd test_flow.gd test_exploration.gd
   test_runner.gd test_core.gd
+  fixtures/（ランナーの検証用のテストファイル。TST-109, 412）
 docs/
 THIRD_PARTY_NOTICES.md
 README.md
