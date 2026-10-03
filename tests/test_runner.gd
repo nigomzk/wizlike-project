@@ -9,6 +9,8 @@ const FIXTURE_SKIP := "res://tests/fixtures/fixture_skip.gd"
 const FIXTURE_CRASH := "res://tests/fixtures/fixture_crash.gd"
 const FIXTURE_CRASH_NESTED := "res://tests/fixtures/fixture_crash_nested.gd"
 const FIXTURE_COMPLETE := "res://tests/fixtures/fixture_complete.gd"
+const FIXTURE_CRASH_SKIP := "res://tests/fixtures/fixture_crash_skip.gd"
+const FIXTURE_PUSH_ERROR := "res://tests/fixtures/fixture_push_error.gd"
 
 
 func run(t) -> void:
@@ -98,6 +100,21 @@ func _t04(t) -> void:
 	var reversed := _run_child("%s,%s" % [FIXTURE_COMPLETE, FIXTURE_CRASH_NESTED])
 	t.check("T04", true, _is_failure_exit(reversed.exit_code))
 	t.check("T04", true, "passed=1 failed=3 skipped=0" in reversed.output)
+
+	# 明示的に skip() されたIDは、打ち切られてもスキップのまま。ほかのIDは失敗になる
+	var skipped_then_crash := _run_child(FIXTURE_CRASH_SKIP)
+	t.check("T04", true, _is_failure_exit(skipped_then_crash.exit_code))
+	t.check("T04", true, "SKIP X01" in skipped_then_crash.output)
+	t.check("T04", false, "FAIL X01" in skipped_then_crash.output)
+	t.check("T04", true, "FAIL X02" in skipped_then_crash.output)
+	t.check("T04", true, "FAIL X03" in skipped_then_crash.output)
+	t.check("T04", true, "passed=0 failed=2 skipped=1" in skipped_then_crash.output)
+
+	# push_error と push_warning は打ち切りとして扱わない
+	var pushed := _run_child(FIXTURE_PUSH_ERROR)
+	t.check("T04", 0, pushed.exit_code)
+	t.check("T04", false, "ABORT" in pushed.output)
+	t.check("T04", true, "passed=1 failed=0 skipped=0" in pushed.output)
 
 
 ## 終了コードが、失敗（非0）として正しく返されたか。0でも、プロセスの起動失敗（-1）でもない
