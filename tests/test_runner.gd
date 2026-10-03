@@ -33,9 +33,9 @@ func _run_child(files: String, extra_args: Array = []) -> Dictionary:
 func _t01(t) -> void:
 	var r := _run_child(FIXTURE_PASS)
 	t.check("T01", 0, r.exit_code)
-	t.check("T01", true, "failed=0" in r.output)
-	# エディターを起動しない: エディターを開く引数を渡しておらず、完走して終了コードを返している
-	t.check("T01", false, "--editor" in r.args or "-e" in r.args)
+	# 0件の実行で成功になる抜け道を塞ぐため、フィクスチャの2件が成功したことも確かめる
+	t.check("T01", true, "passed=2 failed=0" in r.output)
+	# エディターを起動しない（TST-005）: --headless --script で、エディターなしに完走して終了コードを返すこと自体が根拠になる
 
 
 # T02: 1件だけ失敗するフィクスチャを実行する（TST-003, 004）
