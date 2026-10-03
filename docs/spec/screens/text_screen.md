@@ -20,7 +20,7 @@
 | --- | --- | --- |
 | NEW_GAME | `intro` | FLW-002 |
 | GAME_OVER | `game_over` | FLW-011 |
-| ENDING | `ending`、続いて `clear_notice` | FLW-401, FLW-403 |
+| ENDING | `ending`、続いて次のページで `clear_notice`。`clear_notice` で決定するとTOWNへ戻る | FLW-401, FLW-403 |
 
 NEW_GAMEでは、文章の表示前にセッションを初期化する（FLW-002, TWN-0xx）。
 
@@ -42,9 +42,7 @@ NEW_GAMEでは、文章の表示前にセッションを初期化する（FLW-00
 
 ## 5. 未決事項
 
-| # | 内容 | 案 |
-| --- | --- | --- |
-| 1 | `clear_notice` の表示位置 | ENDINGの画面内で `ending` の次の文章として表示し、決定でTOWNへ戻る |
+なし。
 
 ---
 
