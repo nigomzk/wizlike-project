@@ -29,29 +29,29 @@
 
 | 手順 | 内容 | 根拠 |
 | --- | --- | --- |
-| 1 | 名前を入力する。前後の空白を除去して1〜12文字。改行不可 | PTY-003 |
+| 1 | 名前を入力する。条件を満たさない場合は `error_invalid_name` を表示し、次へ進めない | PTY-003 |
 | 2 | 職業を5種から選ぶ。初期能力と初期スキルを詳細に表示する | PTY-002, PTY-210 |
 | 3 | 顔画像を10種から選ぶ | PTY-005 |
-| 4 | 確認ダイアログで確定する。パーティへの追加はPTY-013に従う | PTY-006, PTY-009〜011, PTY-013 |
+| 4 | `guild_register_confirm` の確認ダイアログで確定する。パーティへの追加はPTY-013に従う | PTY-006, PTY-009〜011, PTY-013 |
 
-途中でキャンセルした場合は何も消費しない（PTY-007）。登録者が20人の場合は登録を選べない（PTY-012）。
+途中でキャンセルした場合は何も消費しない（PTY-007）。登録者が20人の場合は登録を選べない（PTY-012, `ROSTER_FULL`）。
 
 ### 3.2 編成・変更・削除・訓練
 
 | 操作 | 結果 | 失敗の条件（エラー） | 根拠 |
 | --- | --- | --- | --- |
-| パーティへ追加 | 末尾に追加する | 4人を超える | PTY-100, PTY-104 |
+| パーティへ追加 | 末尾に追加する | 4人を超える（`PARTY_FULL`） | PTY-100, PTY-104 |
 | パーティから外す | 外す | 最後の1人（`PARTY_EMPTY`） | PTY-103 |
 | 順序の変更 | パーティ内で上下に移動する | なし | PTY-100 |
 | 名前と顔の変更 | 登録と同じ入力で変更する。職業は変更できない | なし | PTY-008 |
-| 削除 | 名前とレベルを示して確認し、装備を所持品へ返して削除する | 他に登録者が残るのにパーティが0人になる（`PARTY_EMPTY`）、装備の返却で30枠を超える（`NO_SPACE`） | PTY-110〜115 |
-| 訓練場 | 冒険者を選び、習得可能なスキルを料金とともに表示し、確認して習得する。死亡者も選べる | 必要レベル不足（`LOCKED`）、習得済み（`ALREADY_LEARNED`）、所持金不足（`NO_GOLD`） | PTY-401〜403, TWN-201, TWN-202 |
+| 削除 | `guild_delete_confirm` で名前とレベルを示して確認し、装備を所持品へ返して削除する | 他に登録者が残るのにパーティが0人になる（`PARTY_EMPTY`）、装備の返却で30枠を超える（`NO_SPACE`） | PTY-110〜115 |
+| 訓練場 | 冒険者を選び、習得可能なスキルを料金とともに表示し、`guild_train_confirm` で確認して習得する。死亡者も選べる | 必要レベル不足（`LOCKED`）、習得済み（`ALREADY_LEARNED`）、所持金不足（`NO_GOLD`） | PTY-401〜403, TWN-201, TWN-202 |
 
 ---
 
 ## 4. 文言
 
-`error_party_empty`、`error_no_space`、`error_no_gold`、`error_locked`、`error_already_learned`
+`guild_register_confirm`、`guild_delete_confirm`、`guild_train_confirm`、`error_invalid_name`、`error_roster_full`、`error_party_full`、`error_party_empty`、`error_no_space`、`error_no_gold`、`error_locked`、`error_already_learned`
 
 ---
 

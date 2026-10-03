@@ -31,3 +31,9 @@ error_no_living_member,生存しているパーティメンバーがいません
 error_already_learned,すでに習得しています。
 error_locked,まだ利用できません。
 error_invalid_save,このセーブデータは読み込めません。
+error_party_full,パーティはこれ以上増やせません。
+error_roster_full,これ以上冒険者を登録できません。
+error_invalid_name,名前は{min}〜{max}文字で入力してください。
+guild_register_confirm,{name}を登録します。
+guild_delete_confirm,{name}（レベル{level}）を削除します。装備は所持品に戻ります。
+guild_train_confirm,{name}が{skill}を{gold}Gで習得します。

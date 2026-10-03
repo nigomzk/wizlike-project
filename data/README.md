@@ -2,7 +2,9 @@
 
 初回版の固定データ。**数値・ID・文章の唯一の正はこのディレクトリのCSVとする。** 仕様文書に数値表を複写しない。
 
-`content_version` は `0.1.0`。ID・数値テーブルを破壊的に変更した場合はこの値を更新する（SAV-5xx）。
+`content_version` は `manifest.csv` に置く（現在 `0.1.0`）。ID・数値テーブルを破壊的に変更した場合はこの値を更新する（SAV-5xx）。
+
+**件数と `content_version` の機械可読な正は `manifest.csv` とする。** 実行時とバリデータは `manifest.csv` を読む（DAT-901）。下表は人が読むための写しであり、`manifest.csv` と一致させる。
 
 ## ファイル
 
@@ -26,13 +28,19 @@
 | `chest_rewards.csv` | 12 | 宝箱の中身。経験値は設定しない |
 | `quests.csv` | 6 | クエストと解禁条件・報酬 |
 | `shop_tiers.csv` | 3 | 商店の品揃え解禁条件 |
-| `texts.csv` | 32 | 導入・ボス前後・エンディング・会話碑・システムメッセージ・エラーコードの表示文 |
+| `texts.csv` | 38 | 導入・ボス前後・エンディング・会話碑・システムメッセージ・確認文・エラーコードの表示文 |
+| `new_game.csv` | 4 | ニューゲーム時に支給する所持金と所持品（TWN-002, TWN-003） |
+| `manifest.csv` | — | 各CSVの件数と `content_version`。自身は件数に含めない |
 
 ## 記法
 
+- Godotでは各CSVのインポートを「Keep File」とし、翻訳リソースとして取り込まない。
+
 - 複数値は `|` で区切る（`mage|priest`、`slime|bat`）。
 - 空欄は「なし」を表す。`buy_price` の `-1` は非売品。
-- `texts.csv` の `{gold}` のような波括弧は、表示時に値を埋め込む箇所を表す。エラーコードの表示文のIDは `error_` + エラーコードの小文字とする（ARC-402）。
+- `texts.csv` の波括弧は、表示時に値を埋め込む箇所を表す。使える名前は `{gold}`、`{name}`、`{level}`、`{skill}`、`{min}`、`{max}` に限る（DAT-909）。
+- `texts.csv` のIDの命名：エラーコードの表示文は `error_` + エラーコードの小文字（ARC-402）、クエストの依頼文は `quest_{クエストID}`（DAT-230）、ボスの文章は `boss_{敵ID}_pre` / `_first` / `_repeat`（DAT-231）。
+- `new_game.csv` の `kind` は `gold`（`amount` が所持金）または `item`（`id` のアイテムを `amount` 個）。
 - 確率は0〜1の小数。`status_chance` は基礎成功率であり、実際の付与率はBTL-016で算出する。
 - 向き（`facing`、`link_facing`）は 北0・東1・南2・西3。
 - `unlock_from_x` / `unlock_from_y` は、そのセルから見た開通許可側の差分（南なら `0,1`）。

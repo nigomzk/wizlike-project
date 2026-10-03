@@ -98,7 +98,7 @@
 | ID | 版番号 | 対象 | 初期値 |
 | --- | --- | --- | --- |
 | GLS-500 | 文書の版 | 本文書群 | v1.0 |
-| GLS-501 | `content_version` | `data/` の固定データ | 0.1.0 |
+| GLS-501 | `content_version` | `data/` の固定データ。値は `data/manifest.csv` に置く | 0.1.0 |
 | GLS-502 | `schema_version` | セーブファイルの形式 | 1 |
 
 | ID | 規則 |

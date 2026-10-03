@@ -1,0 +1,5 @@
+kind,id,amount
+gold,,300
+item,herb,5
+item,antidote,2
+item,return_thread,2

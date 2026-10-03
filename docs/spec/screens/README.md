@@ -21,7 +21,7 @@
 
 | 文書 | 画面（状態） | 手動確認 |
 | --- | --- | --- |
-| [components.md](components.md) | 共通UI部品 | U01, U02 |
+| [components.md](components.md) | 共通UI部品 | U01, U02, U34 |
 | [title.md](title.md) | タイトル（TITLE） | U03, U04 |
 | [settings.md](settings.md) | 設定（SETTINGS） | U05, U06 |
 | [boot_error.md](boot_error.md) | 起動不可のエラー | U07 |
@@ -34,7 +34,7 @@
 | [tavern.md](tavern.md) | 酒場（FACILITY） | U21 |
 | [departure.md](departure.md) | 出発先の選択（DEPARTURE） | U22 |
 | [save_slots.md](save_slots.md) | セーブ（SAVE）・ロード（LOAD） | U23, U24 |
-| [menu.md](menu.md) | メニュー（MENU）・能力・スキル | U25 |
+| [menu.md](menu.md) | メニュー（MENU）・能力・スキル | U25, U35 |
 | [inventory.md](inventory.md) | 所持品 | U26 |
 | [equipment.md](equipment.md) | 装備 | U27 |
 | [map.md](map.md) | 地図 | U28 |
@@ -46,7 +46,15 @@
 
 ---
 
-## 3. 画面文書の書式
+## 3. 開発中の仮画面
+
+| ID | 規則 |
+| --- | --- |
+| PRS-208 | 遷移先の画面が未実装の操作は、見出し「準備中」と戻るボタンだけの仮画面へ遷移する。戻る / Escで遷移元へ戻る。項目を選べるかどうかは本来の規則に従い、未実装を理由に選択不可にしない。段階Hの完了時点で仮画面への遷移が残っていてはならない。 |
+
+---
+
+## 4. 画面文書の書式
 
 各画面文書は次の節をこの順で持つ。該当がない節は「なし」と書く。
 

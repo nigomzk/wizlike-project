@@ -46,9 +46,15 @@
 | DAT-113 | 使用しない数値は0、倍率の既定値は1とする。 |
 | DAT-114 | `requires_previous_hit` の既定値をfalseとする。効果は配列順に適用する（BTL-211, BTL-212）。 |
 | DAT-115 | `duration_steps` は探索効果にのみ用いる。戦闘の状態異常の期間はBTL-4xxの共通規則に従う。 |
-| DAT-116 | `target` は SELF、LIVING_ALLY、DEAD_ALLY、OTHER_LIVING_ALLY、ALL_LIVING_ALLIES、LIVING_ENEMY、ALL_LIVING_ENEMIES、PARTY のいずれかとする。 |
+| DAT-116 | `target` は SELF、LIVING_ALLY、DEAD_ALLY、OTHER_LIVING_ALLY、ALL_LIVING_ALLIES、LIVING_ENEMY、ALL_LIVING_ENEMIES、PARTY のいずれかとする。ALLYはプレイヤー側、ENEMYは敵側を指す。行動者が敵であっても視点を変えない（敵行動の LIVING_ALLY はプレイヤー側の生存者を指す）。 |
 | DAT-117 | `contexts` は town、exploration、battle の組み合わせとする。 |
 | DAT-118 | 通常攻撃と防御は固定のコマンドとして `BattleRules` が保持する。データとして定義しない。 |
+| DAT-119 | `status_id` は poison、paralysis、sleep のいずれかとする。 |
+| DAT-120 | 敵の `action_mode` は weighted（`enemy_action_weights.csv` を用いる）または cycle（`enemy_action_cycles.csv` を用いる）とする。 |
+| DAT-121 | `enemy_modifiers.csv` の `kind` は element または status とする。`key` は element では DAT-112 のうち none 以外、status では DAT-119 の値とする。 |
+| DAT-122 | 商店の品揃え `shop_tier` は A、B、C の列挙値とする。IDではないため GLS-400 を適用しない。 |
+| DAT-123 | セルイベントの `kind` は town_exit、stairs、link、door、shortcut、chest、inscription、boss、warp のいずれかとする。 |
+| DAT-124 | 所持品・宝箱・報酬・ドロップの `item_id` は、`items.csv` と `equipment.csv` の和集合を参照する。両者の間でIDを重複させない。 |
 
 ---
 
@@ -56,17 +62,17 @@
 
 | ID | 型 | フィールド |
 | --- | --- | --- |
-| DAT-200 | JobDef | id, name, base_stats:StatBlock, growth_fixed:StatBlock, growth_extra_chance:StatChance, starting_weapon_id, starting_armor_id, initial_skill_id, learnable_skill_ids, weapon_categories, armor_ids |
+| DAT-200 | JobDef | id, name, base_stats:StatBlock, growth_fixed:StatBlock, growth_extra_chance:StatChance, starting_weapon_id, starting_armor_id, initial_skill_id, weapon_category, learnable_skill_ids（導出）, armor_ids（導出） |
 | DAT-201 | SkillDef | id, name, job_id, required_level:int, learn_cost:int, sp_cost:int, target, contexts, priority:int, always_hit:bool, effects:Array[ActionEffect] |
-| DAT-202 | EquipmentDef | id, name, slot:weapon/armor/accessory, category, allowed_jobs, attack:int, defense:int, stat_bonus:StatBlock, buy_price:int, sell_price:int, shop_tier, icon:Texture2D |
-| DAT-203 | ItemDef | id, name, kind:consumable/material, max_stack:int=9, buy_price:int（-1は非売品）, sell_price:int, shop_tier, target, contexts, effects, icon |
-| DAT-204 | EnemyDef | id, name, hp, attack, defense, tec, agi, luc, element_multipliers:Dictionary, status_multipliers:Dictionary, exp, gold, drop_item_id, drop_chance:float, action_weights:Array[WeightedAction], action_cycle:Array[StringName], portrait:Texture2D, is_boss:bool |
+| DAT-202 | EquipmentDef | id, name, slot:weapon/armor/accessory, category, allowed_jobs, attack:int, defense:int, stat_bonus:StatBlock, buy_price:int, sell_price:int, shop_tier, icon:Texture2D（DAT-228） |
+| DAT-203 | ItemDef | id, name, kind:consumable/material, max_stack:int=9, buy_price:int（-1は非売品）, sell_price:int, shop_tier, target, contexts, effects, icon:Texture2D（DAT-228） |
+| DAT-204 | EnemyDef | id, name, hp, attack, defense, tec, agi, luc, element_multipliers:Dictionary, status_multipliers:Dictionary, exp, gold, drop_item_id, drop_chance:float, action_mode, action_weights:Array[WeightedAction], action_cycle:Array[StringName], portrait:Texture2D（DAT-228）, is_boss:bool |
 | DAT-205 | EnemyActionDef | id, name, target, priority:int, always_hit:bool, effects。SPを消費しない |
 | DAT-206 | WeightedAction | action_id:StringName, weight:int（1以上） |
-| DAT-207 | QuestDef | id, title, description, unlock:ConditionDef, kind:kill/deliver, target_id, target_count:int, reward:RewardDef |
+| DAT-207 | QuestDef | id, title, description（DAT-230）, unlock:ConditionDef, kind:kill/deliver, target_id, target_count:int, reward:RewardDef |
 | DAT-208 | ConditionDef | kind:always/floor_visited/boss_first_defeated/warp_unlocked, target_id |
 | DAT-209 | EncounterDef | enemy_ids:Array[StringName], weight:int |
-| DAT-210 | FloorDef | id, display_name, authoring_scene:PackedScene, encounters:Array[EncounterDef], events:Array[CellEventDef], default_spawn:Vector2i, default_facing:int |
+| DAT-210 | FloorDef | id, display_name, dungeon, order:int, expected_level_min:int, expected_level_max:int, authoring_scene:PackedScene（DAT-229）, encounters:Array[EncounterDef], events:Array[CellEventDef], default_spawn:Vector2i, default_facing:int |
 | DAT-211 | CellEventDef | id, cell:Vector2i, kind, link_floor_id, link_cell:Vector2i, link_facing:int, reward:RewardDef, enemy_id, unlock_from:Vector2i, warp_id, text_id |
 
 | ID | 規則 |
@@ -75,8 +81,26 @@
 | DAT-222 | `priority` は防御とかばうを100、その他を0とする（BTL-113）。 |
 | DAT-223 | 初期スキルの `learn_cost` を0とする。購入不可ではなく、作成時から習得済みとして重複を防ぐ（PTY-403）。 |
 | DAT-224 | `StatBlock` における装備の加算値は、未指定であれば0とする。 |
-| DAT-225 | `CellEventDef` は `kind` ごとに必要なフィールドが異なる。`kind` に応じて必須欄を検証する。 |
+| DAT-225 | `CellEventDef` は `kind` ごとに必要なフィールドが異なる。次の表に従って必須欄を検証し、表にない欄は空とする。 |
 | DAT-226 | 商店の品揃えの解禁条件は `ConditionDef` で表し、tierからの対応表を `GameDatabase` が保持する（TWN-236）。 |
+| DAT-227 | `JobDef.learnable_skill_ids` は `skills.csv` の `job_id`、`armor_ids` は `equipment.csv` の `allowed_jobs` から読込時に導出する。CSVに列を設けない。 |
+| DAT-228 | 装備とアイテムの `icon` は `res://assets/icons/{id}.png`、敵の `portrait` は `res://assets/enemies/{id}.png`、冒険者の顔は `res://assets/portraits/{portrait_id}.png` から解決する。ファイルが存在しない場合は仮の図形を表示し、検証エラーとしない（PRS-601, 602）。 |
+| DAT-229 | `FloorDef.authoring_scene` は `res://scenes/floors/{id}.tscn` から解決する。シーンの存在と内容の検証はマップのコンパイル（D02, D04）で行い、データベースの読込（D01）では行わない。 |
+| DAT-230 | `QuestDef.description` は `data/texts.csv` の `quest_{id}` から解決する。 |
+| DAT-231 | ボスの文章は `data/texts.csv` の `boss_{敵ID}_pre`（全ボス）、`boss_{敵ID}_first` と `boss_{敵ID}_repeat`（最終ボス以外）から解決する。CSVに参照列を設けない。 |
+
+`kind` ごとの必須欄（DAT-225）。
+
+| kind | 必須欄 | 備考 |
+| --- | --- | --- |
+| town_exit | なし | |
+| stairs, link | link_floor_id, link_cell, link_facing | 到着先との相互リンクが成立すること（MAP-125） |
+| door | なし | |
+| shortcut | unlock_from | 単位ベクトルであること（MAP-127） |
+| chest | なし | `chest_rewards.csv` にちょうど1行あること |
+| inscription | text_id | `data/texts.csv` に存在すること |
+| boss | enemy_id | `is_boss` の敵であること |
+| warp | warp_id, link_facing | `link_facing` は街から魔法陣へ到着したときの向き |
 
 ---
 
@@ -102,7 +126,7 @@ cleared: bool
 rng: encounter / battle / loot / creation の4系列
 exploration: ExplorationState（街ではnull）
 last_visited_floor_id: String（未訪問は空文字）
-dirty: bool（保存対象外）
+dirty: bool（保存対象外。立てる条件はFLW-304）
 ```
 
 ### 4.2 各状態（DAT-510〜DAT-514）
@@ -114,6 +138,7 @@ dirty: bool（保存対象外）
 | DAT-512 | QuestState | id, status, kill_count。納品数は在庫から算出し、固定のカウンターを保存しない（QST-205） |
 | DAT-513 | ExplorationState | floor_id, cell, facing, encounter_remaining, silent_steps_remaining, arrival_event_suppressed |
 | DAT-514 | BattleSession | encounter_id, turn_index, actors, planned_actions, item_reservations, action_queue, log, result, reward_claimed。actorごとに hp/sp, poison, paralysis_remaining, sleep_remaining, guard, cover_target を持つ |
+| DAT-515 | ItemStackState | item_id, quantity。装備はquantity=1、消耗品と素材は1〜max_stack |
 
 | ID | 規則 |
 | --- | --- |
@@ -129,18 +154,27 @@ dirty: bool（保存対象外）
 | ID | 規則 |
 | --- | --- |
 | DAT-900 | 起動時に必ず実行する。失敗した場合は開始不可のエラー画面を表示する（ARC-300）。 |
-| DAT-901 | `data/README.md` の件数表と一致することを検査する。 |
+| DAT-901 | 各CSVの行数が `data/manifest.csv` の件数と一致することを検査する。`content_version` も `data/manifest.csv` から読む。 |
 | DAT-902 | すべての参照先IDが存在することを検査する。 |
 | DAT-903 | 料金が非負であること、HPが0より大きいこと、確率が0〜1であることを検査する。 |
 | DAT-904 | 装備とスキルが職業に対応していることを検査する。 |
-| DAT-905 | 各スキルの対象と使用場面の組み合わせが妥当であることを検査する。 |
+| DAT-905 | 各スキル・アイテム・敵行動の対象と使用場面の組み合わせが、下表に従っていることを検査する。素材は対象と使用場面をいずれも空とする。 |
 | DAT-906 | 敵の行動参照、重みの合計、固定巡回の連番を検査する。 |
 | DAT-907 | クエストの対象IDと報酬のIDを検査する。 |
 | DAT-908 | 開発版では、問題のあるIDとファイル名をログへ出力する。 |
+| DAT-909 | `data/texts.csv` について、IDの一意性と本文が空でないこと、コードが固定IDで参照する文章（各画面文書の「文言」節とDAT-230, 231の命名による文章）とARC-401の全コードの `error_*` が存在すること、波括弧の名前が `data/README.md` に定める名前に限られることを検査する。 |
+
+対象と使用場面の組み合わせ（DAT-905）。
+
+| target | 許される使用場面 |
+| --- | --- |
+| LIVING_ENEMY, ALL_LIVING_ENEMIES, OTHER_LIVING_ALLY, SELF | battle のみ |
+| LIVING_ALLY, ALL_LIVING_ALLIES, DEAD_ALLY | battle、town、exploration の任意の組み合わせ |
+| PARTY | town、exploration の任意の組み合わせ（battle を含まない） |
 
 ### 受け入れ条件
 
 | ID | 前提・操作 | 合格条件 | 根拠 |
 | --- | --- | --- | --- |
-| D01 | データベースをロードする | 5職業、25スキル、21装備、9アイテム、14敵、10敵行動、6クエスト、6フロア、18出現編成。すべての参照が有効 | DAT-901, 902 |
-| D03 | 参照切れのID、負の料金、範囲外の確率、重み合計が100でない行動表を注入する | いずれもロードを失敗させ、問題のIDをログへ出力する | DAT-902, 903, 906, 908 |
+| D01 | データベースをロードする | 全CSVの件数が `data/manifest.csv` と一致し、すべての参照が有効である | DAT-901, 902 |
+| D03 | 参照切れのID、負の料金、範囲外の確率、重み合計が100でない行動表、`manifest.csv` と一致しない件数、必須の文章IDの欠落を注入する | いずれもロードを失敗させ、問題のIDをログへ出力する | DAT-902, 903, 906, 908 |
