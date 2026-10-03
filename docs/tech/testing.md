@@ -45,7 +45,7 @@
 | 接頭辞 | 領域 | 定義の所在 |
 | --- | --- | --- |
 | D | データとマップのコンパイル | `tech/data-model.md`（D01, D03）、`tech/map-authoring.md`（D02, D04） |
-| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL06） |
+| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL04, FL06。FL05は欠番） |
 | F | 施設・経済・日数・ボス復活 | `spec/20-town.md`（F01〜F07） |
 | G | 冒険者の登録と編成 | `spec/30-party.md`（G01〜G05） |
 | L | 経験値と成長 | `spec/30-party.md`（L01〜L03） |

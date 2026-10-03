@@ -7,6 +7,7 @@
 | 関心事 | 所在 |
 | --- | --- |
 | 数値そのもの | `data/`（`data/README.md` を参照） |
+| 装備の `stat_bonus` のHP・SPの扱い | `spec/35-inventory.md`（INV-309） |
 | セーブファイルの形式と保存手順 | `spec/70-save.md` |
 | サービスの責務 | `tech/architecture.md` |
 
@@ -70,7 +71,6 @@
 
 | ID | 規則 |
 | --- | --- |
-| DAT-220 | `stat_bonus` のhpとspは最大値への加算として扱う（INV-309）。 |
 | DAT-221 | `growth_fixed` に装備補正を含めない。 |
 | DAT-222 | `priority` は防御とかばうを100、その他を0とする（BTL-113）。 |
 | DAT-223 | 初期スキルの `learn_cost` を0とする。購入不可ではなく、作成時から習得済みとして重複を防ぐ（PTY-403）。 |
@@ -118,7 +118,7 @@ dirty: bool（保存対象外）
 | ID | 規則 |
 | --- | --- |
 | DAT-520 | `FloorState` のイベントIDは全体で一意であるため、重複を検査する（GLS-401）。 |
-| DAT-521 | `ExplorationState` は戦闘中に探索位置を保持する。街へ戻る際に破棄する。保存しない（SAV-203）。 |
+| DAT-521 | `ExplorationState` は戦闘中に探索位置を保持する。街へ戻る際に破棄する。保存しないことはSAV-203に従う。 |
 | DAT-522 | `portrait_id` は `portrait_01` 〜 `portrait_10` とする。 |
 | DAT-523 | 初期装備の防具は全職業で `cloth` とする。 |
 
