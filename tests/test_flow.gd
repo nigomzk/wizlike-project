@@ -147,6 +147,14 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		for button in buttons:
 			button.mouse_entered.emit()
 			t.check("FL07", true, button.has_focus())
+		# ↑ / ↓ も Tab / Shift+Tab と同じく、端から反対の端へ巡回する（U03）
+		for i in buttons.size():
+			var next_button: Control = buttons[(i + 1) % buttons.size()]
+			var previous_button: Control = buttons[(i + buttons.size() - 1) % buttons.size()]
+			t.check("FL07", next_button, buttons[i].find_valid_focus_neighbor(SIDE_BOTTOM))
+			t.check("FL07", previous_button, buttons[i].find_valid_focus_neighbor(SIDE_TOP))
+			t.check("FL07", next_button, buttons[i].find_next_valid_focus())
+			t.check("FL07", previous_button, buttons[i].find_prev_valid_focus())
 
 	# 項目を押して、遷移先と、仮画面「準備中」と戻るを確かめる（PRS-208）
 	var expected_states := [s.NEW_GAME, s.LOAD, s.SETTINGS]
@@ -159,7 +167,11 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", false, flow.has_session())
 		await t.process_frame
 		t.check("FL07", true, _buttons(placeholder)[0].has_focus())
-		_press(placeholder, "戻る")
+		if i == 0:
+			# Esc でも遷移元へ戻る。画面が差し替わった後に、外れたノードの処理で止まらない（PRS-208）
+			t.root.push_input(_action_event(&"ui_cancel"))
+		else:
+			_press(placeholder, "戻る")
 		t.check("FL07", s.TITLE, flow.state)
 		t.check("FL07", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))
 
@@ -182,6 +194,13 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 	t.check("FL07", before, _snapshot(save_dir))
 	t.root.remove_child(main)
 	main.free()
+
+
+func _action_event(action: StringName) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	return event
 
 
 func _buttons(root: Node) -> Array:

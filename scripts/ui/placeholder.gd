@@ -22,5 +22,6 @@ func grab_initial_focus() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		_flow.go_back()
+		# go_back() は画面を差し替えて、このノードをツリーから外す。外れた後は get_viewport() が null になるため、先に処理済みにする
 		get_viewport().set_input_as_handled()
+		_flow.go_back()
