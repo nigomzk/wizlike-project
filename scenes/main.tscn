@@ -1,8 +1,12 @@
-[gd_scene format=3]
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/game_flow.gd" id="1_flow"]
+[ext_resource type="Script" path="res://scripts/ui/screen_host.gd" id="2_host"]
 
 [node name="Main" type="Node"]
 
 [node name="GameFlow" type="Node" parent="."]
+script = ExtResource("1_flow")
 
 [node name="ScreenHost" type="Control" parent="."]
 layout_mode = 3
@@ -11,6 +15,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("2_host")
 
 [node name="DungeonHost" type="Node3D" parent="."]
 
