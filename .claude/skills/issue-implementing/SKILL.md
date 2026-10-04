@@ -32,7 +32,7 @@ description: /issue-drafting で起票したGitHub Issueを入力として、開
 | 5 | レビューを依頼する | 専門サブエージェント（並列） |
 | 6 | 妥当な指摘を修正する | メイン |
 | 7 | 4〜6を再実施する（**レビュー依頼は1サイクルにつき最大2回**） | メイン＋専門 |
-| 8 | pushする | メイン |
+| 8 | pushし、コード解説の資料を作る | メイン＋`code-explainer` |
 | 9 | PRを作成する | メイン |
 | 10 | ユーザーがPRの修正内容を確認し、Godotで動作を確認する | ユーザー |
 | 11 | ユーザーがレビュー指摘を出す（指摘がなければ完了） | ユーザー |
@@ -48,8 +48,12 @@ description: /issue-drafting で起票したGitHub Issueを入力として、開
 <scratchpad>/issue-<N>/
   context7-log.md            # 調査ログ（全サイクル共通で追記）
   cycle-<c>/
+    base-sha.txt             # サイクル開始時の HEAD（2サイクル目以降。手順12で記録）
     test-red.log             # テストを先に書いたときの実行結果
     test-green.log           # 実装後の実行結果
+    code-guide-diff.patch    # コード解説の材料の差分（手順8-2）
+    code-guide-notes.json    # code-explainer が書いた解説（手順8-2）
+    code-guide-build.log     # 資料の検証と書き出しの結果（手順8-2）
     round-<r>/
       packet.md              # レビュー依頼の材料（templates/review-packet.md）
       issue.md               # Issue本文
@@ -74,6 +78,15 @@ Godotの実行ファイルは環境変数 `GODOT` で指す。未設定の場合
 | Bash | `<確認方法のコマンド> > <ログのパス> 2>&1; echo "exit=$?" >> <ログのパス>` |
 
 受入IDの指定に含めるのは、**自動検証の受入ID**だけである。手動確認の受入IDは含めない。どの接頭辞が自動検証でどれが手動確認かは、`docs/index.md` から受入IDの索引を辿って、実行時に判定する。
+
+### コード解説の資料の置き場所
+
+手順8-2で作るコード解説の資料（HTML）は、**リポジトリの外の固定フォルダ**に置く。セッションを閉じても読み返せるようにするためで、スクラッチパッドには置かない。
+
+- フォルダは環境変数 `CODE_GUIDE_DIR` で指す。未設定の場合は推測せず、ユーザーにパスを確認する。リポジトリに絶対パスを書かない
+- ファイル名は `issue-<N>.html` とし、サイクルごとに上書きする（2サイクル目以降は、そのサイクルで変わった箇所に印が付く）
+- 資料をコミットしない。PR本文やPRのコメントにパスを書かない（リポジトリは公開されている）
+- 資料の組み立てと検証には Node.js（`node`）を使う
 
 ---
 
@@ -238,11 +251,38 @@ ID一覧の下書き（`id-table.md`）への指摘は、下書きを直す。�
 | このサイクルのレビューが1回目で、手順6で修正した | 手順4に戻り、commitして2回目のレビューを依頼する |
 | このサイクルのレビューが2回目 | 手順6の修正をcommitし、手順8へ。**3回目のレビューは依頼しない。** レビューを経ていない修正と、残った must は、PR本文に明記する |
 
-### 8. pushする
+### 8. pushし、コード解説の資料を作る
+
+#### 8-1. pushする
 
 ```bash
 git push -u origin {type}/{N}-{slug}
 ```
+
+#### 8-2. コード解説の資料を作る
+
+GDScript と Godot を初めて扱うユーザーが、PRをレビューするときの補足資料を作る。解説の中身は `code-explainer` が書き、メインエージェントは材料の用意と、スクリプトでの検証・書き出しを行う。**レビュー（手順5）の回数には数えず、資料のためのコミットもしない。**
+
+1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M main...HEAD -- '*.gd'`。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
+2. `CODE_GUIDE_DIR` と `node --version` を確かめる。どちらかが使えない場合は、資料を作らずに手順10で理由を報告する（作ったことにしない）
+3. `git diff main...HEAD` を `cycle-<c>/code-guide-diff.patch` に保存する
+4. `code-explainer` を呼び出す。プロンプトには次の絶対パスと値を書く
+   - `criteria/code-guide.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
+   - Issue本文（最後のラウンドの `issue.md`）、`code-guide-diff.patch`、`context7-log.md`
+   - 対象の `.gd` の一覧
+   - 前のサイクルの `code-guide-notes.json`（あれば）
+   - 出力先 `cycle-<c>/code-guide-notes.json`
+5. 返答の「Context7 に新たに問い合わせた事項」を、`templates/context7-log.md` の形で `context7-log.md` に追記する（使った箇所は「コード解説」）
+6. 検証して書き出す。出力を `cycle-<c>/code-guide-build.log` に保存する
+   ```bash
+   node .claude/skills/issue-implementing/scripts/build-code-guide.mjs \
+     --notes <cycle-<c>/code-guide-notes.json> --out "$CODE_GUIDE_DIR/issue-<N>.html" \
+     --cycle <c> [--cycle-base <cycle-<c>/base-sha.txt の値>] [--pr <PR番号>]
+   ```
+   - `--cycle-base` は2サイクル目以降に、`--pr` はPRが既にある場合（レビュー対応モード）に付ける
+7. 終了コードが1（検証の誤り）の場合は、ログの「誤り」の行を同じ `code-explainer` に SendMessage で渡して直させ、6をやり直す。**やり直しは2回まで**とし、それでも誤りが残れば資料を書き出さず、手順10で報告する
+
+スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
 
 ### 9. PRを作成する
 
@@ -267,6 +307,7 @@ gh pr create --repo nigomzk/wizlike-project --base main --head {type}/{N}-{slug}
 - 自動検証の結果（指定した受入IDと終了コード）
 - Godotで行ってほしい手動確認（手動確認の受入IDと手順。PR本文と同じもの）
 - 未確認の事項（Context7で裏付けられなかった判断）、見送った指摘、残った must
+- コード解説の資料のパス（`$CODE_GUIDE_DIR/issue-<N>.html`）と、未確認の解説の件数。作らなかった場合はその理由
 
 ### 11. ユーザーのレビュー
 
@@ -274,7 +315,7 @@ gh pr create --repo nigomzk/wizlike-project --base main --head {type}/{N}-{slug}
 
 ### 12. レビュー対応モード（3〜11を再実施する）
 
-1. ブランチに切り替えて最新にする：`git switch {type}/{N}-{slug}` → `git pull --ff-only`
+1. ブランチに切り替えて最新にする：`git switch {type}/{N}-{slug}` → `git pull --ff-only`。続けて、新しいサイクルの番号 `c` を決め、`git rev-parse HEAD` の値を `cycle-<c>/base-sha.txt` に保存する（手順8-2で、このサイクルで変わった箇所に印を付けるため）
 2. ユーザーの指摘を集める
    ```bash
    gh pr view <PR番号> --repo nigomzk/wizlike-project --json number,url,state,mergeable,reviews,comments
@@ -286,7 +327,7 @@ gh pr create --repo nigomzk/wizlike-project --base main --head {type}/{N}-{slug}
 3. 未対応の指摘がない場合は、その旨を報告して止まる。ユーザーが「OK」「指摘なし」と示した場合は、完了を報告して止まる
 4. `mergeable` が `CONFLICTING` の場合は、`main` を取り込んで競合を解消し、テストを再実行する
 5. 指摘を処置する。**ユーザーの指摘は原則としてすべて対応する。** ただし、仕様と矛盾する指摘や意図が曖昧な指摘は、実装の前にユーザーに確認する
-6. サイクル番号を1つ増やし、手順3〜8を行う。レビューの回数は新しいサイクルで0から数える。packet.md にはユーザーの指摘と、その処置を載せる
+6. サイクル番号 `c` で、手順3〜8を行う。レビューの回数は新しいサイクルで0から数える。packet.md にはユーザーの指摘と、その処置を載せる
 7. PRの本文の「対応した規則ID」節、「受入IDごとの結果」表、「指摘の処置」節、「サイクルごとの対応」節を更新し（`gh pr edit --body-file`）、`templates/cycle-reply.md` に従ってPRにコメントを投稿する（`gh pr comment --body-file`）
 8. 手順10と同じ内容を報告して止まる
 
@@ -306,3 +347,4 @@ gh pr create --repo nigomzk/wizlike-project --base main --head {type}/{N}-{slug}
 | 未実施を完了としない | スキップや未実施の手動確認を、成功や完了として扱わない |
 | レビューは1サイクルに2回まで | 3回目を依頼しない。残った指摘はPRに明記する |
 | マージしない | PR作成後はユーザーの確認を待つ |
+| 解説に出典を付ける | コード解説の言語・エンジンの解説は Godot 4.5 の公式ドキュメントを根拠にし、裏付けがないものは未確認と明示する |
