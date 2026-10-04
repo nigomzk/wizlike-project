@@ -61,13 +61,21 @@ func _show_screen(state: GameFlowScript.State) -> void:
 	add_child(current_screen)
 	if input_blocker != null:
 		move_child(input_blocker, -1)
+	# `_ready` の中より、遅延させたほうが確実にフォーカスが付く
+	current_screen.call_deferred("grab_initial_focus")
 
 
 func _on_input_block_changed(blocked: bool) -> void:
+	if blocked == input_blocker.visible:
+		return
 	input_blocker.visible = blocked
 	if blocked:
 		_focus_before_block = get_viewport().gui_get_focus_owner()
 		input_blocker.grab_focus()
-	elif is_instance_valid(_focus_before_block) and _focus_before_block.is_inside_tree():
+		return
+	# 遮断中に画面が差し替わっていた場合は、元のフォーカスが残っていないので、新しい画面の先頭へ置く
+	if is_instance_valid(_focus_before_block) and _focus_before_block.is_inside_tree():
 		_focus_before_block.grab_focus()
-		_focus_before_block = null
+	elif current_screen != null:
+		current_screen.grab_initial_focus()
+	_focus_before_block = null

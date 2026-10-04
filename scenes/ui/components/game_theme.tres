@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=4 format=3]
+[gd_resource type="Theme" load_steps=3 format=3]
 
 [ext_resource type="FontVariation" path="res://assets/fonts/noto_sans_jp_400.tres" id="1_font"]
 
@@ -20,9 +20,9 @@ default_font_size = 24
 Button/styles/focus = SubResource("focus_box")
 CheckBox/styles/focus = SubResource("focus_box")
 CheckButton/styles/focus = SubResource("focus_box")
-HSlider/styles/focus = SubResource("focus_box")
 ItemList/styles/focus = SubResource("focus_box")
 LineEdit/styles/focus = SubResource("focus_box")
 OptionButton/styles/focus = SubResource("focus_box")
 Tree/styles/focus = SubResource("focus_box")
-TabContainer/styles/focus = SubResource("focus_box")
+NoteLabel/base_type = &"Label"
+NoteLabel/font_sizes/font_size = 20

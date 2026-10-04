@@ -78,7 +78,7 @@ func _initialize() -> void:
 
 	var load_errors := 0
 	for path in files:
-		if not _run_file(path):
+		if not await _run_file(path):
 			load_errors += 1
 
 	quit(_finish(required, load_errors))
@@ -96,7 +96,7 @@ func _run_file(path: String) -> bool:
 			_status[id] = ""
 	var error_counter := ScriptErrorCounter.new()
 	OS.add_logger(error_counter)
-	test_file.run(self)
+	await test_file.run(self)
 	OS.remove_logger(error_counter)
 	if error_counter.count() > 0:
 		_fail_aborted_file(path, error_counter.count())

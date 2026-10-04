@@ -11,7 +11,7 @@ const SLOT_COUNT := 5
 
 
 func run(t) -> void:
-	_fl07(t)
+	await _fl07(t)
 
 
 # FL07: TITLEで各項目を選ぶ（FLW-001, 108, 112, SAV-003）
@@ -23,7 +23,7 @@ func _fl07(t) -> void:
 	t.check("FL07", SLOT_COUNT, before.size())
 
 	_fl07_game_flow(t, save_dir, before)
-	_fl07_screens(t, save_dir, before)
+	await _fl07_screens(t, save_dir, before)
 
 	_remove_dir(tmp_root)
 
@@ -130,6 +130,8 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 	var quits := [0]
 	flow.quit_handler = func(): quits[0] += 1
 	t.root.add_child(main)
+	# 初期フォーカスは遅延して置かれるため、1フレーム待つ
+	await t.process_frame
 
 	# 起動直後のTITLE：ゲーム名と4項目を、この順で表示する（FLW-001, PRS-700）
 	t.check("FL07", s.TITLE, flow.state)
@@ -141,6 +143,10 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", TITLE_ITEMS, buttons.map(func(b): return b.text))
 		# 最初の項目にフォーカスがある（キーボードのみで巡回できる。PRS-007）
 		t.check("FL07", true, buttons[0].has_focus())
+		# マウスを載せた項目へフォーカス枠が移る。押さずにマウスだけで4項目を巡回できる（U03）
+		for button in buttons:
+			button.mouse_entered.emit()
+			t.check("FL07", true, button.has_focus())
 
 	# 項目を押して、遷移先と、仮画面「準備中」と戻るを確かめる（PRS-208）
 	var expected_states := [s.NEW_GAME, s.LOAD, s.SETTINGS]
@@ -151,6 +157,8 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", ["準備中"], _label_texts(placeholder))
 		t.check("FL07", ["戻る"], _buttons(placeholder).map(func(b): return b.text))
 		t.check("FL07", false, flow.has_session())
+		await t.process_frame
+		t.check("FL07", true, _buttons(placeholder)[0].has_focus())
 		_press(placeholder, "戻る")
 		t.check("FL07", s.TITLE, flow.state)
 		t.check("FL07", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))

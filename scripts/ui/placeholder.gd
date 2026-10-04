@@ -12,7 +12,12 @@ func setup(flow: Node) -> void:
 
 func _ready() -> void:
 	_back.pressed.connect(func(): _flow.go_back())
-	_back.grab_focus()
+
+
+## 戻るボタンへフォーカスを置く。入力の遮断中は遮断側がフォーカスを持つため、置かない（FLW-200）。遅延呼び出しの前に画面が外された場合も置かない。
+func grab_initial_focus() -> void:
+	if is_inside_tree() and not _flow.is_input_blocked():
+		_back.grab_focus()
 
 
 func _unhandled_input(event: InputEvent) -> void:
