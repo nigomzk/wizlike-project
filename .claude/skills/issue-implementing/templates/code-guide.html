@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コード解説</title>
+<!--
+  issue-implementing の手順8-2で、scripts/build-code-guide.mjs が下の GUIDE_DATA を埋めて書き出す。
+  このテンプレートを直接編集して資料の中身を書かない。中身は code-explainer が書く解説のJSONから作る。
+-->
+<style>
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --surface-2: #f3f1ec; --border: #e2ded5; --border-strong: #cfcabe;
+  --text: #24231f; --text-2: #5f5d57; --text-3: #8a877f;
+  --accent: #185fa5; --accent-bg: #e6f1fb;
+  --lang: #534ab7; --lang-bg: #eeedfe;
+  --eng: #0f6e56; --eng-bg: #e1f5ee;
+  --des: #993c1d; --des-bg: #faece7;
+  --warn: #854f0b; --warn-bg: #faeeda;
+  --new: #3b6d11; --new-bg: #eaf3de;
+  --added-bg: #eef6e4; --cycle-bg: #fff4d6; --target-bg: #e6f1fb;
+  --tok-kw: #a626a4; --tok-str: #50a14f; --tok-num: #986801; --tok-com: #8a877f; --tok-fn: #4078f2; --tok-cls: #c18401; --tok-ann: #e45649;
+  --font: "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --mono: "Cascadia Code", "Consolas", "BIZ UDGothic", "MS Gothic", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1c1a; --surface: #252523; --surface-2: #2e2e2b; --border: #3a3a37; --border-strong: #4a4a46;
+    --text: #ecebe6; --text-2: #b4b2a9; --text-3: #888780;
+    --accent: #85b7eb; --accent-bg: #0c2c4c;
+    --lang: #cecbf6; --lang-bg: #2e2a5c; --eng: #9fe1cb; --eng-bg: #0b3a2e; --des: #f5c4b3; --des-bg: #4a1f10;
+    --warn: #fac775; --warn-bg: #412402; --new: #c0dd97; --new-bg: #1f3a0a;
+    --added-bg: #1f2b17; --cycle-bg: #3a2f10; --target-bg: #0c2c4c;
+    --tok-kw: #c678dd; --tok-str: #98c379; --tok-num: #d19a66; --tok-com: #7f848e; --tok-fn: #61afef; --tok-cls: #e5c07b; --tok-ann: #e06c75;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1c1a; --surface: #252523; --surface-2: #2e2e2b; --border: #3a3a37; --border-strong: #4a4a46;
+  --text: #ecebe6; --text-2: #b4b2a9; --text-3: #888780;
+  --accent: #85b7eb; --accent-bg: #0c2c4c;
+  --lang: #cecbf6; --lang-bg: #2e2a5c; --eng: #9fe1cb; --eng-bg: #0b3a2e; --des: #f5c4b3; --des-bg: #4a1f10;
+  --warn: #fac775; --warn-bg: #412402; --new: #c0dd97; --new-bg: #1f3a0a;
+  --added-bg: #1f2b17; --cycle-bg: #3a2f10; --target-bg: #0c2c4c;
+  --tok-kw: #c678dd; --tok-str: #98c379; --tok-num: #d19a66; --tok-com: #7f848e; --tok-fn: #61afef; --tok-cls: #e5c07b; --tok-ann: #e06c75;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.75; }
+a { color: var(--accent); }
+code { font-family: var(--mono); font-size: 0.9em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); min-height: 100vh; }
+nav.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 20px 16px; border-right: 1px solid var(--border); background: var(--surface); font-size: 13px; line-height: 1.6; }
+nav.side h2 { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; color: var(--text-3); margin: 18px 0 6px; }
+nav.side a { display: flex; justify-content: space-between; gap: 6px; padding: 3px 8px; border-radius: 6px; color: var(--text); text-decoration: none; }
+nav.side a:hover { background: var(--surface-2); }
+nav.side a.cur { background: var(--accent-bg); color: var(--accent); }
+nav.side .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+nav.side .cnt { color: var(--text-3); font-size: 11px; flex: none; }
+.brand { font-weight: 500; font-size: 14px; }
+.brand small { display: block; color: var(--text-3); font-weight: 400; font-size: 12px; }
+.toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.toggle input { margin: 0; }
+main { padding: 28px 40px 80px; max-width: 1100px; }
+h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+.meta { color: var(--text-2); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--text-2); margin: 12px 0 0; }
+section.block { margin-top: 36px; }
+h2.sec-h { font-size: 18px; font-weight: 500; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+h3 { font-size: 15px; font-weight: 500; margin: 20px 0 6px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+.mermaid-box { overflow-x: auto; text-align: center; min-height: 40px; }
+.mermaid-box svg { max-width: 100%; height: auto; }
+table.plain { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.plain th, table.plain td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.card { overflow-x: auto; }
+table.plain th { font-weight: 500; color: var(--text-2); border-top: none; }
+.file { margin-top: 44px; }
+.file-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.file-h h2 { font-family: var(--mono); font-size: 17px; font-weight: 500; margin: 0; }
+.file-sum { margin: 6px 0 0; }
+.scenes { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+.fn { margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.fn-h { padding: 12px 16px 8px; }
+.fn-h .name { font-family: var(--mono); font-weight: 500; font-size: 14px; }
+.fn-h .range { color: var(--text-3); font-size: 12px; margin-left: 8px; }
+.fn-sum { margin: 4px 0 0; color: var(--text); }
+.code { overflow-x: auto; background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.code table { border-collapse: collapse; width: 100%; tab-size: 4; font-family: var(--mono); font-size: 13px; line-height: 1.6; }
+.code td { padding: 0 8px; white-space: pre; vertical-align: top; }
+.code td.ln { width: 1%; text-align: right; color: var(--text-3); user-select: none; padding-left: 12px; }
+.code td.pm { width: 1%; color: var(--new); user-select: none; padding: 0 4px; }
+.code td.mk { width: 1%; text-align: right; padding-right: 12px; }
+.code tr.added td { background: var(--added-bg); }
+.code tr.cyc td { background: var(--cycle-bg); }
+.code tr:target td, .code tr.hl td { background: var(--target-bg); }
+.mark { display: inline-block; min-width: 20px; height: 20px; line-height: 20px; padding: 0 4px; margin-left: 2px; text-align: center; border-radius: 10px; font-size: 11px; font-family: var(--font); text-decoration: none; }
+.notes { list-style: none; margin: 0; padding: 8px 16px 14px; }
+.note { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 8px; padding: 8px 0; border-top: 1px dashed var(--border); }
+.note:first-child { border-top: none; }
+.note:target { background: var(--target-bg); border-radius: 8px; }
+.note .no { padding-top: 2px; }
+.note .body > p { margin: 0; }
+.note .sub { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; font-size: 12px; color: var(--text-2); }
+.tag { display: inline-block; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 5px; margin-right: 6px; white-space: nowrap; vertical-align: 1px; }
+.tag.language { background: var(--lang-bg); color: var(--lang); }
+.tag.engine { background: var(--eng-bg); color: var(--eng); }
+.tag.design { background: var(--des-bg); color: var(--des); }
+.mark.language { background: var(--lang-bg); color: var(--lang); }
+.mark.engine { background: var(--eng-bg); color: var(--eng); }
+.mark.design { background: var(--des-bg); color: var(--des); }
+.badge { display: inline-block; font-size: 11px; line-height: 18px; padding: 0 7px; border-radius: 5px; white-space: nowrap; }
+.badge.new { background: var(--new-bg); color: var(--new); }
+.badge.unv { background: var(--warn-bg); color: var(--warn); }
+.badge.st { background: var(--surface-2); color: var(--text-2); }
+.rule { font-family: var(--mono); font-size: 11px; background: var(--surface-2); color: var(--text-2); padding: 0 6px; border-radius: 4px; }
+.gl { margin-top: 12px; }
+.gl-item { padding: 12px 0; border-top: 1px solid var(--border); }
+.gl-item:target { background: var(--target-bg); border-radius: 8px; padding-left: 8px; }
+.gl-item h3 { margin: 0 0 4px; font-family: var(--mono); }
+.gl-item p { margin: 0; }
+.uses { font-size: 12px; color: var(--text-2); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.empty { color: var(--text-3); font-size: 13px; }
+body.only-cycle .file:not(.cyc), body.only-cycle .fn:not(.cyc), body.only-cycle nav a.f:not(.cyc) { display: none; }
+.tok-keyword, .tok-boolean { color: var(--tok-kw); } .tok-string { color: var(--tok-str); } .tok-number { color: var(--tok-num); }
+.tok-comment { color: var(--tok-com); font-style: italic; } .tok-function { color: var(--tok-fn); } .tok-class-name, .tok-builtin { color: var(--tok-cls); }
+.tok-annotation, .tok-variable { color: var(--tok-ann); }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  nav.side { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  main { padding: 20px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side" id="side" aria-label="目次"></nav>
+  <main id="main"><p class="empty">読み込み中…</p></main>
+</div>
+<script>window.Prism = { manual: true };</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-gdscript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script id="guide-data" type="application/json">/*__GUIDE_DATA__*/</script>
+<script>
+(function () {
+  "use strict";
+  const G = JSON.parse(document.getElementById("guide-data").textContent);
+  const CAT = { language: "言語", engine: "エンジン", design: "設計" };
+  const CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const circ = (n) => (n >= 1 && n <= 20 ? CIRCLED[n - 1] : "(" + n + ")");
+  // 本文中の `code` だけを <code> にする。それ以外の記法は使わない
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+  const fileAnchor = (fi) => "f" + fi;
+  const secAnchor = (fi, si) => "f" + fi + "-s" + si;
+  const noteAnchor = (fi, si, no) => "f" + fi + "-s" + si + "-n" + no;
+  const lineAnchor = (fi, n) => "f" + fi + "-L" + n;
+  const cycleOn = G.meta.cycle >= 2;
+  const cycleLabel = "サイクル" + G.meta.cycle + "で変更";
+
+  function highlight(text) {
+    const P = window.Prism;
+    if (!P || !P.languages || !P.languages.gdscript) return esc(text);
+    try {
+      return P.highlight(text, P.languages.gdscript, "gdscript").replace(/class="token ([^"]+)"/g, (m, cls) =>
+        'class="' + cls.split(/\s+/).map((c) => "tok-" + c).join(" ") + '"');
+    } catch (e) { return esc(text); }
+  }
+
+  function sourceLink(item) {
+    if (item.unverified) return '<span class="badge unv">未確認</span>';
+    if (item.source) return '<a href="' + esc(item.source) + '" target="_blank" rel="noopener">出典（Godot 4.5 docs）</a>';
+    return "";
+  }
+
+  function termLinks(terms) {
+    if (!terms || !terms.length) return "";
+    const byId = Object.fromEntries(G.glossary.map((g) => [g.id, g]));
+    return "用語集：" + terms.map((t) => '<a href="#g-' + esc(t) + '">' + esc(byId[t] ? byId[t].term : t) + "</a>").join(" / ");
+  }
+
+  function renderSide() {
+    const m = G.meta;
+    let h = '<div class="brand">Issue #' + esc(m.issue) + (m.pr ? " ／ PR #" + esc(m.pr) : "") + "<small>" + esc(m.title) + "</small></div>";
+    if (cycleOn) {
+      h += '<label class="toggle"><input type="checkbox" id="only-cycle">サイクル' + esc(m.cycle) + "の変更だけ表示</label>";
+    }
+    h += "<h2>全体像</h2><a href=\"#overview\">関係図と読む順</a>";
+    h += "<h2>ファイル</h2>";
+    G.files.forEach((f, fi) => {
+      const n = f.sections.reduce((a, s) => a + s.notes.length, 0);
+      h += '<a class="f' + (f.changedInCycle ? " cyc" : "") + '" href="#' + fileAnchor(fi) + '" data-target="' + fileAnchor(fi) + '"><span class="path" title="' + esc(f.path) + '">' + esc(f.path.split("/").pop()) + '</span><span class="cnt">' + (f.changedInCycle && cycleOn ? '<span class="badge new">更新</span> ' : "") + n + "件</span></a>";
+    });
+    h += "<h2>用語集</h2>";
+    G.glossary.forEach((g) => {
+      h += '<a href="#g-' + esc(g.id) + '"><span class="path">' + esc(g.term) + '</span><span class="cnt">' + esc(CAT[g.category]) + "</span></a>";
+    });
+    document.getElementById("side").innerHTML = h;
+    const box = document.getElementById("only-cycle");
+    if (box) {
+      let saved = false;
+      try { saved = localStorage.getItem("code-guide-only-cycle") === "1"; } catch (e) { /* 保存できない環境では既定値のまま */ }
+      box.checked = saved;
+      document.body.classList.toggle("only-cycle", saved);
+      box.addEventListener("change", () => {
+        document.body.classList.toggle("only-cycle", box.checked);
+        try { localStorage.setItem("code-guide-only-cycle", box.checked ? "1" : "0"); } catch (e) { /* 同上 */ }
+      });
+    }
+  }
+
+  function renderHeader() {
+    const m = G.meta;
+    return "<h1>コード解説：" + esc(m.title) + "</h1>" +
+      '<div class="meta"><span>ブランチ <code>' + esc(m.branch) + "</code></span><span>比較 <code>" + esc(m.base) + "...</code><code>" + esc(m.headShort) + "</code></span>" +
+      "<span>サイクル " + esc(m.cycle) + "</span><span>生成 " + esc(m.generatedAt) + "</span></div>" +
+      '<div class="legend"><span><span class="tag language">言語</span>GDScriptの言語仕様</span><span><span class="tag engine">エンジン</span>Godotのエンジン仕様</span><span><span class="tag design">設計</span>このプロジェクトの設計意図</span>' +
+      '<span><span class="badge unv">未確認</span>公式ドキュメントで裏付けられなかった解説</span>' +
+      (cycleOn ? '<span><span class="badge new">' + esc(cycleLabel) + "</span>今回のサイクルで変わった箇所（コードの黄色の行）</span>" : "") +
+      "<span>コードの緑の行と＋は、このPRで追加・変更した行</span></div>";
+  }
+
+  function renderOverview() {
+    const o = G.overview;
+    let h = '<section class="block" id="overview"><h2 class="sec-h">全体像</h2>';
+    h += '<h3>関係図</h3><div class="card"><div class="mermaid-box" id="mermaid-box"><p class="empty">図を描画しています…（オフラインでは下の一覧だけが表示されます）</p></div>';
+    h += '<details style="margin-top:12px"><summary class="meta" style="cursor:pointer">つながりの一覧（図の文字が読みにくいとき）</summary><table class="plain" style="margin-top:8px"><tr><th>から</th><th>へ</th><th>つながり</th><th>内容</th></tr>';
+    const kind = { tree: "シーンの親子", signal: "シグナル", call: "メソッドの呼び出し", instance: "生成", other: "その他" };
+    const label = Object.fromEntries(o.nodes.map((n) => [n.id, n.label]));
+    o.edges.forEach((e) => {
+      h += "<tr><td>" + esc(label[e.from] || e.from) + "</td><td>" + esc(label[e.to] || e.to) + "</td><td>" + esc(kind[e.kind] || e.kind) + "</td><td>" + inline(e.label) + "</td></tr>";
+    });
+    h += "</table></details></div>";
+    h += '<h3>読む順</h3><div class="card"><table class="plain"><tr><th>#</th><th>ファイル</th><th>役割</th></tr>';
+    o.readingOrder.forEach((r, i) => {
+      const fi = G.files.findIndex((f) => f.path === r.file);
+      h += "<tr><td>" + (i + 1) + '</td><td><a href="#' + fileAnchor(fi) + '"><code>' + esc(r.file) + "</code></a></td><td>" + inline(r.role) + "</td></tr>";
+    });
+    h += "</table></div></section>";
+    return h;
+  }
+
+  function renderFile(f, fi) {
+    const counts = { language: 0, engine: 0, design: 0 };
+    f.sections.forEach((s) => s.notes.forEach((n) => counts[n.category]++));
+    let h = '<section class="file' + (f.changedInCycle ? " cyc" : "") + '" id="' + fileAnchor(fi) + '">';
+    h += '<div class="file-h"><h2>' + esc(f.path) + '</h2><span class="badge st">' + (f.status === "added" ? "新規" : "変更") + "</span>" +
+      (f.changedInCycle && cycleOn ? '<span class="badge new">' + esc(cycleLabel) + "</span>" : "") +
+      '<span class="meta">言語 ' + counts.language + "・エンジン " + counts.engine + "・設計 " + counts.design + "</span></div>";
+    h += '<p class="file-sum">' + inline(f.summary) + "</p>";
+    if (f.scenes && f.scenes.length) {
+      h += '<div class="scenes">関係するシーン：' + f.scenes.map((s) => "<code>" + esc(s) + "</code>").join(" ") + "</div>";
+    }
+    if (f.status === "modified") {
+      h += '<div class="scenes">既存のファイルのため、このPRで変更した部分を含む関数だけを載せている。</div>';
+    }
+    f.sections.forEach((s, si) => { h += renderSection(f, fi, s, si); });
+    h += "</section>";
+    return h;
+  }
+
+  function renderSection(f, fi, s, si) {
+    const marks = {};
+    s.notes.forEach((n) => { (marks[n.line] = marks[n.line] || []).push(n); });
+    let h = '<div class="fn' + (s.changedInCycle ? " cyc" : "") + '" id="' + secAnchor(fi, si) + '"><div class="fn-h"><span class="name">■ ' + esc(s.name) + '</span><span class="range">' + s.startLine + "–" + s.endLine + "行</span>" +
+      (s.changedInCycle && cycleOn ? ' <span class="badge new">' + esc(cycleLabel) + "</span>" : "") +
+      '<p class="fn-sum">' + inline(s.summary) + "</p></div>";
+    h += '<div class="code"><table>';
+    s.lines.forEach((l) => {
+      const cls = [l.cycle && cycleOn ? "cyc" : "", l.added && f.status === "modified" ? "added" : ""].filter(Boolean).join(" ");
+      const mk = (marks[l.n] || []).map((n) => '<a class="mark ' + n.category + '" href="#' + noteAnchor(fi, si, n.no) + '" title="' + esc(CAT[n.category]) + '">' + circ(n.no) + "</a>").join("");
+      h += '<tr id="' + lineAnchor(fi, l.n) + '"' + (cls ? ' class="' + cls + '"' : "") + '><td class="ln">' + l.n + '</td><td class="pm">' + (l.added ? "+" : "") + "</td><td>" + highlight(l.text) + '</td><td class="mk">' + mk + "</td></tr>";
+    });
+    h += "</table></div>";
+    if (s.notes.length) {
+      h += '<ol class="notes">';
+      s.notes.forEach((n) => {
+        const sub = [];
+        if (n.category !== "design") sub.push(sourceLink(n));
+        const tl = termLinks(n.terms); if (tl) sub.push(tl);
+        if (n.ruleIds && n.ruleIds.length) sub.push(n.ruleIds.map((r) => '<span class="rule">' + esc(r) + "</span>").join(" "));
+        if (n.cycle && cycleOn) sub.push('<span class="badge new">' + esc(cycleLabel) + "</span>");
+        h += '<li class="note" id="' + noteAnchor(fi, si, n.no) + '"><span class="no"><a class="mark ' + n.category + '" href="#' + lineAnchor(fi, n.line) + '">' + circ(n.no) + "</a></span>" +
+          '<div class="body"><p><span class="tag ' + n.category + '">' + CAT[n.category] + "</span>" + n.line + "行：" + inline(n.text) + "</p>" +
+          (sub.length ? '<div class="sub">' + sub.filter(Boolean).join("<span>·</span>") + "</div>" : "") + "</div></li>";
+      });
+      h += "</ol>";
+    } else {
+      h += '<p class="empty" style="padding:8px 16px">この関数に、言語・エンジン・設計の解説の対象はない。</p>';
+    }
+    h += "</div>";
+    return h;
+  }
+
+  function renderGlossary() {
+    let h = '<section class="block" id="glossary"><h2 class="sec-h">用語集</h2><div class="gl">';
+    if (!G.glossary.length) h += '<p class="empty">用語集の項目はない。</p>';
+    G.glossary.forEach((g) => {
+      h += '<div class="gl-item" id="g-' + esc(g.id) + '"><h3><span class="tag ' + g.category + '">' + CAT[g.category] + "</span>" + esc(g.term) + "</h3><p>" + inline(g.text) + "</p>";
+      const uses = g.uses.map((u) => '<a href="#' + noteAnchor(u.fi, u.si, u.no) + '">' + esc(u.file.split("/").pop()) + ":" + u.line + "</a>").join(" ");
+      h += '<div class="uses">' + (g.category !== "design" ? sourceLink(g) + "<span>·</span>" : "") + "<span>使用箇所：" + (uses || "なし") + "</span></div></div>";
+    });
+    h += "</div></section>";
+    return h;
+  }
+
+  function renderMermaid() {
+    const box = document.getElementById("mermaid-box");
+    if (!window.mermaid) { box.innerHTML = '<p class="empty">図のライブラリを読み込めなかったため、下の一覧で確認してください。</p>'; return; }
+    const dark = document.documentElement.dataset.theme === "dark" ||
+      (document.documentElement.dataset.theme !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+    try {
+      window.mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict" });
+      window.mermaid.render("guide-mermaid", G.overview.mermaid).then((r) => { box.innerHTML = r.svg; })
+        .catch(() => { box.innerHTML = '<p class="empty">図を描画できなかったため、下の一覧で確認してください。</p>'; });
+    } catch (e) {
+      box.innerHTML = '<p class="empty">図を描画できなかったため、下の一覧で確認してください。</p>';
+    }
+  }
+
+  function trackCurrent() {
+    const links = Array.from(document.querySelectorAll("nav.side a.f"));
+    if (!("IntersectionObserver" in window) || !links.length) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        links.forEach((a) => a.classList.toggle("cur", a.dataset.target === e.target.id));
+      });
+    }, { rootMargin: "0px 0px -70% 0px" });
+    G.files.forEach((f, fi) => { const el = document.getElementById(fileAnchor(fi)); if (el) io.observe(el); });
+  }
+
+  document.title = "コード解説 #" + G.meta.issue + "：" + G.meta.title;
+  renderSide();
+  document.getElementById("main").innerHTML = renderHeader() + renderOverview() + G.files.map(renderFile).join("") + renderGlossary();
+  renderMermaid();
+  trackCurrent();
+  if (location.hash) { const t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
+})();
+</script>
+</body>
+</html>
