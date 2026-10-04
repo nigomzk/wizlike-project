@@ -14,7 +14,7 @@ func run(t) -> void:
 	await _fl07(t)
 
 
-# FL07: TITLEで各項目を選ぶ（FLW-001, 108, 112, SAV-003）
+# FL07: TITLEで各項目を選ぶ（FLW-001, FLW-108, FLW-112, SAV-003）
 func _fl07(t) -> void:
 	var tmp_root := "user://test_flow_fl07"
 	var save_dir := tmp_root + "/saves"
@@ -28,7 +28,7 @@ func _fl07(t) -> void:
 	_remove_dir(tmp_root)
 
 
-## GameFlow だけで、状態・入力遮断・終了の差し替え点を確かめる（FLW-204, TST-106, 107）。
+## GameFlow だけで、状態・入力遮断・終了の差し替え点を確かめる（FLW-204, TST-106, TST-107）。
 func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	var script := load(GAME_FLOW_SCRIPT) as GDScript
 	t.check("FL07", true, script != null)
@@ -43,7 +43,7 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	flow.state_changed.connect(func(new_state, old_state): history.append([old_state, new_state]))
 	t.root.add_child(flow)
 
-	# 起動するとTITLEになる。TITLEの間はセッションが存在しない（FLW-108, 112）
+	# 起動するとTITLEになる。TITLEの間はセッションが存在しない（FLW-108, FLW-112）
 	t.check("FL07", s.TITLE, flow.state)
 	t.check("FL07", false, flow.has_session())
 
@@ -65,7 +65,7 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	t.check("FL07", true, flow.go_back())
 	t.check("FL07", s.TITLE, flow.state)
 
-	# 「設定」→ SETTINGS。閉じるとTITLEへ戻る。TOWNへは遷移しない（FLW-111〜113）
+	# 「設定」→ SETTINGS。閉じるとTITLEへ戻る。TOWNへは遷移しない（FLW-111, FLW-112, FLW-113）
 	t.check("FL07", true, flow.open_settings())
 	t.check("FL07", s.SETTINGS, flow.state)
 	t.check("FL07", false, flow.has_session())
@@ -163,7 +163,7 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", s.TITLE, flow.state)
 		t.check("FL07", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))
 
-	# 入力の遮断中は、背景の入力を止める（FLW-200, 204）
+	# 入力の遮断中は、背景の入力を止める（FLW-200, FLW-204）
 	var blocker: Control = host.input_blocker
 	t.check("FL07", false, blocker.visible)
 	flow.block_input(&"modal")

@@ -1,5 +1,5 @@
 extends Control
-## タイトル画面の presenter。押下は GameFlow へ要求を送るだけで、遷移の判断をしない（ARC-204, 205）。
+## タイトル画面の presenter。押下は GameFlow へ要求を送るだけで、遷移の判断をしない（ARC-204, ARC-205）。
 
 var _flow: Node = null
 

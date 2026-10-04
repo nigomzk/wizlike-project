@@ -1,9 +1,9 @@
 extends Node
 ## ゲーム全体の状態と遷移、入力の遮断を保持する（ARC-301, FLW-0xx, FLW-204）。
-## 画面は判断を持たず、ここへ要求を送って状態の変化を表示する（ARC-204, 205）。
+## 画面は判断を持たず、ここへ要求を送って状態の変化を表示する（ARC-204, ARC-205）。
 ## `class_name` は付けない。クラス登録のキャッシュがない状態でも、パスの `preload` で参照できるようにするため。
 
-## 状態（FLW-001〜016）
+## 状態（FLW-001, FLW-002, FLW-003, FLW-004, FLW-005, FLW-006, FLW-007, FLW-008, FLW-009, FLW-010, FLW-011, FLW-012, FLW-013, FLW-014, FLW-015, FLW-016）
 enum State {
 	BOOT,
 	BOOT_ERROR,
@@ -71,7 +71,7 @@ func open_load() -> bool:
 	return _leave_title(State.LOAD)
 
 
-## 設定を開く。呼び出し元を記録し、閉じると必ずそこへ戻る（FLW-111〜113）。
+## 設定を開く。呼び出し元を記録し、閉じると必ずそこへ戻る（FLW-111, FLW-112, FLW-113）。
 func open_settings() -> bool:
 	if is_input_blocked() or (state != State.TITLE and state != State.MENU):
 		return false
