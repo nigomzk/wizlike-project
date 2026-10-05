@@ -56,7 +56,59 @@
 
 ---
 
-## 4. 設定（PRS-4xx）
+## 4. UIの見た目（PRS-3xx）
+
+全画面に共通する見た目の値（トークン）を定義する。共通Theme `scenes/ui/components/game_theme.tres` はこの節の実装である（ARC-208）。値はバランスの数値ではないため `data/` に置かない（SCP-401の対象外）。
+
+| ID | 規則 |
+| --- | --- |
+| PRS-300 | 色のトークンを下表で定め、この表を正とする。共通Themeはこれを実装し、トークンを変えたらThemeを直す。Themeに入れるのは、使う型があるトークンだけとする。 |
+| PRS-301 | 文字の段階を下表で定める。本文と注記の大きさは PRS-004 に従う。 |
+| PRS-302 | 形と余白を下表で定める。 |
+| PRS-303 | パネルは二重線と panel_fill で描き、角飾りを付けない。二重線は画像を使わず、共通Theme の StyleBox で描く。 |
+| PRS-304 | 選択中の項目（フォーカスを持つ項目）を、select_fill の塗りと accent 2px の枠で示し、文字を text_selected にする。マウスが載っているだけの項目は、選択されていない項目と同じ見た目にする。マウスが載っている項目の文字は、選択中であっても text とし、選択中であることは塗りと枠で示す。PRS-007 のフォーカス表示の具体化であり、塗りに加えて枠の形でも示すので PRS-006 を満たす。 |
+| PRS-305 | 選択できない項目は文字を text_disabled で表示し、項目名の後ろに「（不可）」を添える（PRS-006）。 |
+
+### 4.1 色（PRS-300）
+
+| トークン | 値 | 用途 |
+| --- | --- | --- |
+| bg_base | #0E1420 | 画面の地 |
+| panel_fill | #0E1E4E、不透明度72% | パネルの塗り |
+| panel_border | #5CC8C0 | パネルの二重線 |
+| item_border | #2F6A78 | パネルの内側の区切り |
+| accent | #8FE3DA | ゲーム名と見出しの文字、選択の枠 |
+| select_fill | #3C8CAA、不透明度45% | 選択の塗り |
+| text | #E4ECF4 | 本文 |
+| text_selected | #FFFFFF | 選択中の項目の文字 |
+| text_disabled | #6A7F94 | 選択できない項目の文字 |
+| gauge_hp | #E0604A | HPのゲージ |
+| gauge_sp | #6AA8F0 | SPのゲージ |
+| status_warn | #F0A070 | 毒などの警告 |
+
+### 4.2 文字（PRS-301）
+
+| 段階 | 書体 | 大きさ | 色 | Type Variation |
+| --- | --- | --- | --- | --- |
+| ゲーム名 | Noto Serif JP 700（PRS-614） | 56px | accent | `GameTitleLabel` |
+| 見出し | Noto Serif JP 700（PRS-614） | 28px | accent | `HeadingLabel` |
+| 本文 | Noto Sans JP 400（PRS-610） | PRS-004 | text | （既定） |
+| 注記 | Noto Sans JP 400（PRS-610） | PRS-004 | text | `NoteLabel` |
+
+### 4.3 形と余白（PRS-302）
+
+| 対象 | 値 |
+| --- | --- |
+| パネルの二重線 | 外側の線2px、隙間2px、内側の線1px。線は panel_border とし、隙間も panel_fill で塗る |
+| パネルの角丸 | 外側の線で6px。内側の線は外側と同心とし、6から外側の線と隙間の幅を引いた2px |
+| パネルの内余白 | 16px（内側の線から内容まで） |
+| 項目 | 角丸3px、高さ40px。タイトルの項目は56px |
+| 区切り | item_border の1px |
+| 余白の段階 | 4 / 8 / 16 / 24px。縦に並べる要素の間隔は8pxを既定とする |
+
+---
+
+## 5. 設定（PRS-4xx）
 
 | ID | 規則 |
 | --- | --- |
@@ -67,7 +119,7 @@
 
 ---
 
-## 5. 演出（PRS-5xx）
+## 6. 演出（PRS-5xx）
 
 | ID | 規則 |
 | --- | --- |
@@ -79,7 +131,7 @@
 
 ---
 
-## 6. 素材（PRS-6xx）
+## 7. 素材（PRS-6xx）
 
 | ID | 規則 |
 | --- | --- |
@@ -89,7 +141,7 @@
 | PRS-603 | 効果音は 決定・取消・衝突・攻撃・回復・勝利 の6種とする。簡単な自作音を許容する。 |
 | PRS-605 | 外部の有料素材を必要条件にしない。 |
 
-### 6.1 フォント
+### 7.1 フォント
 
 | ID | 規則 |
 | --- | --- |
@@ -97,10 +149,12 @@
 | PRS-611 | [SIL OFL 1.1 の OFL.txt](https://raw.githubusercontent.com/google/fonts/main/ofl/notosansjp/OFL.txt) を著作権表示ごと添付する。 |
 | PRS-612 | 入手元を `THIRD_PARTY_NOTICES.md` に記載する。実装時に取得したファイルのハッシュを記録する。 |
 | PRS-613 | OS既定のフォントのみに依存しない。 |
+| PRS-614 | 見出し用の日本語フォントとして [Noto Serif JP 可変フォント](https://github.com/google/fonts/blob/main/ofl/notoserifjp/NotoSerifJP%5Bwght%5D.ttf) を同梱する。ウェイト700をゲーム名と見出しに使う（PRS-301）。 |
+| PRS-615 | Noto Serif JP の [SIL OFL 1.1 の OFL.txt](https://raw.githubusercontent.com/google/fonts/main/ofl/notoserifjp/OFL.txt) を著作権表示ごと、Noto Sans JP の OFL.txt とは別のファイルで添付する。 |
 
 ---
 
-## 7. 物語（PRS-7xx）
+## 8. 物語（PRS-7xx）
 
 | ID | 規則 |
 | --- | --- |
@@ -112,11 +166,11 @@
 
 ---
 
-## 8. 受け入れ条件（Windows実機・手動）
+## 9. 受け入れ条件（Windows実機・手動）
 
 | ID | 合格条件 | 根拠 |
 | --- | --- | --- |
-| W01 | Windows 11上でEXEから起動し、エディターなしで日本語フォント・素材・音が表示される | PRS-610, 600, 603 |
+| W01 | Windows 11上でEXEから起動し、エディターなしで日本語フォント・素材・音が表示される | PRS-610, PRS-614, PRS-600, PRS-603 |
 | W02 | キーボードのみ、マウスのみのいずれでも、登録・施設・出発・戦闘・保存・ロードが完結する。ただし名前の入力はキーボードを用いる | PRS-111, 100〜108 |
 | W03 | 1280×720、960×540、フルスクリーンで、文字・ダイアログ・4人表示・敵3体が切れない | PRS-000, 005 |
 | W04 | 横移動、旋回、壁への衝突、階段、魔法陣への到着で視点がずれず、操作の二重受付がない | PRS-500, 501, DNG-006 |

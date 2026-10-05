@@ -22,7 +22,7 @@
 | 文書 | 画面（状態） | 手動確認 |
 | --- | --- | --- |
 | [components.md](components.md) | 共通UI部品 | U01, U02, U34 |
-| [title.md](title.md) | タイトル（TITLE） | U03, U04 |
+| [title.md](title.md) | タイトル（TITLE） | U03, U04, U38 |
 | [settings.md](settings.md) | 設定（SETTINGS） | U05, U06 |
 | [boot_error.md](boot_error.md) | 起動不可のエラー | U07 |
 | [text_screen.md](text_screen.md) | 導入（NEW_GAME）・全滅（GAME_OVER）・エンディング（ENDING） | U08〜U10 |
