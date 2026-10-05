@@ -51,7 +51,7 @@
 | 接頭辞 | 領域 | 定義の所在 |
 | --- | --- | --- |
 | D | データとマップのコンパイル | `tech/data-model.md`（D01, D03）、`tech/map-authoring.md`（D02, D04） |
-| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL04, FL06〜FL08。FL05は欠番） |
+| FL | 状態遷移 | `spec/10-flow.md`（FL01〜FL04, FL06〜FL09。FL05は欠番） |
 | F | 施設・経済・日数・ボス復活 | `spec/20-town.md`（F01〜F08） |
 | G | 冒険者の登録と編成 | `spec/30-party.md`（G01〜G05） |
 | L | 経験値と成長 | `spec/30-party.md`（L01〜L03） |
@@ -64,9 +64,9 @@
 | W | Windows実機・手動（通し試験） | `tech/presentation.md`（W01〜W08） |
 | T | テスト基盤 | `tech/testing.md`（T01〜T04） |
 | A | 構成と共通サービス | `tech/architecture.md`（A01〜A07） |
-| U | 画面ごとの手動確認 | `spec/screens/` の各画面文書（U01〜U35, U38） |
+| U | 画面ごとの手動確認 | `spec/screens/` の各画面文書（U01〜U38） |
 
-自動検証は T, A, D, FL, F, G, L, P, I, E, B, Q, S の計79件。手動検証は W の8件と U の36件。
+自動検証は T, A, D, FL, F, G, L, P, I, E, B, Q, S の計80件。手動検証は W の8件と U の38件。
 
 ---
 

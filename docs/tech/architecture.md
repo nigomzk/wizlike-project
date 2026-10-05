@@ -62,6 +62,7 @@ scripts/
   rules/{battle_rules,battle_session,growth_rules,inventory_rules,exploration_rules}.gd
   dungeon/{floor_authoring,floor_compiler,dungeon_builder,dungeon_controller}.gd
   ui/（各画面のpresenter）
+  ui/components/（共通UI部品のスクリプト。画面背景 screen_background.gd など）
   definitions/（定義Resource型）
 data/（固定データのCSV。件数と版は manifest.csv）
 assets/
@@ -89,7 +90,7 @@ README.md
 | ARC-203 | TITLEへ戻った時点で旧セッションを破棄する（FLW-108）。 |
 | ARC-204 | 画面は状態のコピーを独自に保持して保存しない。セッションを参照し、サービスへコマンドを送る。 |
 | ARC-205 | UIは更新の通知を受けて表示する。UIが直接モデルを書き換えない。 |
-| ARC-207 | 共通UI部品（確認ダイアログ、一覧と詳細と戻るのテンプレート、所持金ヘッダー、フォーカス表示）を先に用意し、各画面はこれを利用する。画面ごとに同等の実装を重複させない。 |
+| ARC-207 | 共通UI部品（確認ダイアログ、一覧と詳細と戻るのテンプレート、所持金ヘッダー、フォーカス表示、画面背景）を先に用意し、各画面はこれを利用する。画面ごとに同等の実装を重複させない。 |
 | ARC-208 | 画面のシーンとスクリプトは、見た目を共通Theme（`scenes/ui/components/game_theme.tres`。PRS-3xx）と Type Variation だけで決める。`theme_override_*` のプロパティ、`add_theme_*_override()`、画面ごとの `theme` を使わない。寸法（`custom_minimum_size`）、アンカー、コンテナによる配置はシーンで定めてよい。共通Theme には、スクリプトを持つリソースを入れない。 |
 | ARC-209 | マウスを動かして載せた項目へフォーカスを移す。この処理は ScreenHost が、表示した画面のフォーカスを受け付ける項目へ一括で付け、画面ごとには結ばない。マウスを動かさずに項目がカーソルの下へ来た場合（画面の差し替えなど）と、入力の遮断中（FLW-200）は移さない。 |
 
