@@ -111,6 +111,17 @@ func _a06(t) -> void:
 	var bad_theme := Theme.new()
 	bad_theme.set_stylebox(&"panel", &"PanelContainer", scripted_box)
 	t.check("A06", ["PanelContainer/styles/panel"], _scripted_theme_items(bad_theme))
+	# 項目の先の依存（フォントの base_font）にあるスクリプトも見逃さない
+	var scripted_font_script := GDScript.new()
+	scripted_font_script.source_code = "extends FontVariation\n"
+	t.check("A06", OK, scripted_font_script.reload())
+	var scripted_font := FontVariation.new()
+	scripted_font.set_script(scripted_font_script)
+	var outer_font := FontVariation.new()
+	outer_font.base_font = scripted_font
+	var nested_theme := Theme.new()
+	nested_theme.default_font = outer_font
+	t.check("A06", ["default_font/base_font"], _scripted_theme_items(nested_theme))
 
 	var scene_paths := _files_with_suffix(SCENES_DIR, ".tscn")
 	for path in KNOWN_SCENES:
@@ -148,24 +159,34 @@ func _a06(t) -> void:
 	t.check("A06", 3, _theme_violations(bad_scene, theme).size())
 
 
-## Theme の中で、スクリプトを持つリソース（StyleBox、フォント、アイコン、既定のフォント）を「型/種類/名前」の一覧で返す（ARC-208）。
+## Theme から保存されるプロパティをたどって届くリソース（項目、フォントの base_font や fallbacks などの入れ子を含む）のうち、
+## スクリプトを持つものを、Theme からのプロパティのパス（例：PanelContainer/styles/panel、default_font/base_font）の一覧で返す（ARC-208）。
 func _scripted_theme_items(theme: Theme) -> Array:
 	var result: Array = []
-	if theme.default_font != null and theme.default_font.get_script() != null:
-		result.append("default_font")
-	for type_name in theme.get_stylebox_type_list():
-		for item in theme.get_stylebox_list(type_name):
-			if theme.get_stylebox(item, type_name).get_script() != null:
-				result.append("%s/styles/%s" % [type_name, item])
-	for type_name in theme.get_font_type_list():
-		for item in theme.get_font_list(type_name):
-			if theme.get_font(item, type_name).get_script() != null:
-				result.append("%s/fonts/%s" % [type_name, item])
-	for type_name in theme.get_icon_type_list():
-		for item in theme.get_icon_list(type_name):
-			if theme.get_icon(item, type_name).get_script() != null:
-				result.append("%s/icons/%s" % [type_name, item])
+	if theme.get_script() != null:
+		result.append("(theme)")
+	_collect_scripted(theme, "", {}, result)
 	return result
+
+
+func _collect_scripted(resource: Resource, path: String, visited: Dictionary, result: Array) -> void:
+	if visited.has(resource):
+		return
+	visited[resource] = true
+	for property in resource.get_property_list():
+		if not (property.usage & PROPERTY_USAGE_STORAGE) or property.name == "script":
+			continue
+		var value = resource.get(property.name)
+		var children: Array = []
+		if value is Resource:
+			children = [value]
+		elif value is Array:
+			children = value.filter(func(v): return v is Resource)
+		for child in children:
+			var child_path: String = property.name if path == "" else path + "/" + property.name
+			if child.get_script() != null:
+				result.append(child_path)
+			_collect_scripted(child, child_path, visited, result)
 
 
 ## シーンの中で、ARC-208 に反するプロパティを「ノードのパス: プロパティ名」の一覧で返す。
