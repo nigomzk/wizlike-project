@@ -62,7 +62,6 @@ scripts/
   rules/{battle_rules,battle_session,growth_rules,inventory_rules,exploration_rules}.gd
   dungeon/{floor_authoring,floor_compiler,dungeon_builder,dungeon_controller}.gd
   ui/（各画面のpresenter）
-  ui/components/（共通UI部品のスクリプト。二重線の StyleBox を含む）
   definitions/（定義Resource型）
 data/（固定データのCSV。件数と版は manifest.csv）
 assets/
@@ -91,7 +90,7 @@ README.md
 | ARC-204 | 画面は状態のコピーを独自に保持して保存しない。セッションを参照し、サービスへコマンドを送る。 |
 | ARC-205 | UIは更新の通知を受けて表示する。UIが直接モデルを書き換えない。 |
 | ARC-207 | 共通UI部品（確認ダイアログ、一覧と詳細と戻るのテンプレート、所持金ヘッダー、フォーカス表示）を先に用意し、各画面はこれを利用する。画面ごとに同等の実装を重複させない。 |
-| ARC-208 | 画面のシーンとスクリプトは、見た目を共通Theme（`scenes/ui/components/game_theme.tres`。PRS-3xx）と Type Variation だけで決める。`theme_override_*` のプロパティ、`add_theme_*_override()`、画面ごとの `theme` を使わない。寸法（`custom_minimum_size`）、アンカー、コンテナによる配置はシーンで定めてよい。 |
+| ARC-208 | 画面のシーンとスクリプトは、見た目を共通Theme（`scenes/ui/components/game_theme.tres`。PRS-3xx）と Type Variation だけで決める。`theme_override_*` のプロパティ、`add_theme_*_override()`、画面ごとの `theme` を使わない。寸法（`custom_minimum_size`）、アンカー、コンテナによる配置はシーンで定めてよい。共通Theme には、スクリプトを持つリソースを入れない。 |
 | ARC-209 | マウスを動かして載せた項目へフォーカスを移す。この処理は ScreenHost が、表示した画面のフォーカスを受け付ける項目へ一括で付け、画面ごとには結ばない。マウスを動かさずに項目がカーソルの下へ来た場合（画面の差し替えなど）と、入力の遮断中（FLW-200）は移さない。 |
 
 ---
@@ -150,5 +149,5 @@ README.md
 | A03 | ある系列から引く。画面の開閉、一覧の操作、冒険者作成の途中キャンセルを行う | 引いた系列以外のstateは変わらない。画面操作と途中キャンセルではどの系列のstateも変わらない | GLS-200, 202, 203, PTY-007 |
 | A04 | 同じseedで冒険者を同じ順に作成する | 作成の確定時にのみ `creation` 系列から1回引き、冒険者ごとの `growth_rng` のseedが2回の実行で一致する | GLS-201, PTY-006 |
 | A05 | ARC-401の全エラーコードとサービスの戻り値を確認する | 全コードについて `data/texts.csv` に `error_` + 小文字のIDが存在する。サービスの戻り値が `{ok, error_code, changes}` の形である | ARC-400〜402 |
-| A06 | `res://scenes/` 配下の全 `.tscn` と `res://scripts/ui/` 配下の全 `.gd` を走査する。override を1つ持つシーンをテスト内で作り、同じ判定にかける | シーンに `theme_override_` で始まるプロパティと `theme` プロパティがない。スクリプトに `add_theme_` と `theme_override` がない。`theme_type_variation` の値がすべて共通Theme に存在する。プロジェクトの共通Theme が `res://scenes/ui/components/game_theme.tres` である。走査したシーンに `title.tscn` と `placeholder.tscn` が含まれ、テスト内で作ったシーンは違反として検出される | ARC-208, PRS-300 |
+| A06 | `res://scenes/` 配下の全 `.tscn` と `res://scripts/ui/` 配下の全 `.gd` を走査する。override を1つ持つシーンをテスト内で作り、同じ判定にかける | シーンに `theme_override_` で始まるプロパティと `theme` プロパティがない。スクリプトに `add_theme_` と `theme_override` がない。`theme_type_variation` の値がすべて共通Theme に存在する。プロジェクトの共通Theme が `res://scenes/ui/components/game_theme.tres` であり、スクリプトを持つリソースを含まない。走査したシーンに `title.tscn` と `placeholder.tscn` が含まれ、テスト内で作ったシーンは違反として検出される | ARC-208, PRS-300 |
 | A07 | ScreenHost に画面を表示し、別の項目へマウスの移動を送る。マウスを動かさずに項目へカーソルが入った通知（`mouse_entered`）だけを送る。入力を遮断してマウスの移動を送る | マウスの移動を送った項目へフォーカスが移る。通知だけではフォーカスが動かない。遮断中は移らない | ARC-209, FLW-200 |
