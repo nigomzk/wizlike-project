@@ -55,7 +55,7 @@ tools: Read, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query
 ### 調査ログとの照合
 
 - 差分の中で、`criteria/context7.md` の確認が必須の対象に当たる箇所を洗い出し、調査ログに記録があるかを照合する
-- 記録がない箇所は、**自分でContext7に問い合わせて確かめる。** そのうえで、誤用なら must、正しいが記録がないだけなら should として指摘する
+- 記録がない箇所は、**自分でContext7に問い合わせて確かめる**（packet.md の申し送りに、問い合わせの上限に達したとあれば、問い合わせず「未確認」とする）。 そのうえで、誤用なら must、正しいが記録がないだけなら should として指摘する
 - ライブラリIDは `criteria/context7.md` で固定されたものを使う。ほかの版の資料を根拠にしない
 
 根拠として技術設計の規則IDを書く場合は、`docs/index.md` から辿って、現在の設計書で確かめてから書く。

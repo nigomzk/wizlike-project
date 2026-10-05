@@ -57,7 +57,7 @@ description: /issue-drafting で起票したGitHub Issueを入力として、開
     round-<r>/
       packet.md              # レビュー依頼の材料（templates/review-packet.md）
       issue.md               # Issue本文
-      diff.patch             # git diff main...HEAD
+      diff.patch             # git diff origin/main...HEAD
       diff-since-prev.patch  # 2ラウンド目以降：前ラウンドの HEAD..HEAD の差分（手順5-1）
       head-sha.txt           # このラウンドを依頼したときの HEAD（次のラウンドの差分の起点）
       test-latest.log        # このラウンド直前の実行結果
@@ -110,9 +110,20 @@ gh pr list --repo nigomzk/wizlike-project --state all --head <見つかったブ
 | 状態 | モード | 進み方 |
 | --- | --- | --- |
 | ブランチもPRもない | **初回モード** | 手順1から |
-| ブランチはあるがPRがない | **再開モード** | 手順1を行ったあと、ブランチの差分とコミットから進み具合を把握し、ユーザーに状態を報告してから続きを進める |
+| ブランチはあるがPRがない | **再開モード** | 手順1を行ったあと、ブランチの差分とコミットから進み具合を把握し、ユーザーに状態を報告してから続きを進める。設計書の更新のコミットだけがあるブランチ（手順1の `type:spec-change`）も、ここに当たる |
 | OPENのPRがある | **レビュー対応モード** | 手順12へ |
 | PRがMERGEDまたはCLOSED、またはIssueがCLOSED | — | 状態を報告して止まる |
+
+#### 環境の確認
+
+手順1に進む前に、次を確かめる。足りないものは、まとめて1回でユーザーに確認する（後の手順で気づくと、終盤まで未解決のまま残る）。
+
+```bash
+echo "GODOT=$GODOT"; echo "CODE_GUIDE_DIR=$CODE_GUIDE_DIR"; node --version
+```
+
+- `GODOT`（テストの実行に必要）と `CODE_GUIDE_DIR`（手順8-2のコード解説の資料。`.gd` を変更する見込みのときだけ必要）が未設定なら、推測せず、パスを確認する
+- 補助スクリプト（ID一覧、コード解説）は `node` で動く。ファイルの一括編集や集計にも `node` を使う。シェルの `python` は、環境によっては無言で失敗する
 
 ### 1. Issueを読む
 
@@ -128,17 +139,19 @@ gh pr list --repo nigomzk/wizlike-project --state all --head <見つかったブ
    - 設計書どうしの矛盾が解消できない
    - Issueの記述と設計書が食い違っている（Issueが引用している規則IDが存在しない、または意味が変わっている場合を含む）
    - 画面文書の未決事項が残っている
-   - `type:spec-change` が付いている。この場合は、実装の前に行う `docs/` の更新と決定記録への記録の内容を提示し、承認を得る
+   - `type:spec-change` が付いている。この場合は、実装の前に行う `docs/` の更新と決定記録への記録の内容を提示し、承認を得る。ただし、ブランチにこのIssueの設計書の更新のコミットと、決定記録の節（`### 段階X・Issue #<N>`）がすでにあれば、承認済みとして扱い、再度求めない
+5. `type:spec-change` では、承認を得て設計書の更新と決定記録をコミットしたところで、ユーザーに「ここで会話を区切り、新しい会話で `/issue-implementing <N>` を実行すれば、再開モードで手順3から続けられる」と伝える。続けるか区切るかはユーザーが選ぶ。設計書の確認までの会話は、以降の毎回の作業で読み直されるため、区切ると使用量が減る
 
 ### 2. 開発用ブランチを作成する
 
 作業ツリーがクリーンであることを確認する。クリーンでなければ、ユーザーに確認する。
 
 ```bash
-git switch main
-git pull --ff-only
-git switch -c {type}/{N}-{slug}
+git fetch origin
+git switch -c {type}/{N}-{slug} origin/main
 ```
+
+手元の `main` を経由しない。手元の `main` が古いと、差分に無関係なファイルが入るため、以降の比較もすべて `origin/main` を基準にする。
 
 | 要素 | 決め方 |
 | --- | --- |
@@ -153,7 +166,7 @@ Issueの「タスク」を上から順に進める。**Issueに書かれてい�
 
 #### 3-1. Context7で確認する
 
-`.claude/skills/issue-implementing/criteria/context7.md` に従い、**Godotのエンジン仕様に関わる判断は、Context7で確認してから実装する。** 思い込みや記憶で書かない。調べた内容は、`templates/context7-log.md` の形で `context7-log.md` に追記する。
+`.claude/skills/issue-implementing/criteria/context7.md` に従い、**Godotのエンジン仕様に関わる判断は、Context7で確認してから実装する。** 思い込みや記憶で書かない。調べた内容は、`templates/context7-log.md` の形で `context7-log.md` に追記する。実装に入る前に、確認が必要な判断をまとめて洗い出し、1概念ずつ問い合わせる。同じ事項は、先にログを見て、繰り返し問い合わせない。
 
 #### 3-2. テストを先に書き、失敗を確認する
 
@@ -193,7 +206,7 @@ Co-Authored-By: <セッションの指示に従う>
 | ファイル | 内容 |
 | --- | --- |
 | `issue.md` | Issueの本文（タイトル・ラベル・コメントを含む） |
-| `diff.patch` | `git diff main...HEAD` |
+| `diff.patch` | `git diff origin/main...HEAD`（手元の `main` は古いことがあるため、`origin/main` と比べる） |
 | `diff-since-prev.patch` | 2ラウンド目以降だけ。`git diff <前ラウンドの head-sha.txt の値>..HEAD` |
 | `head-sha.txt` | `git rev-parse HEAD` の値 |
 | `test-latest.log` | このラウンドの直前に、3-3の2・3と同じ条件で実行した結果 |
@@ -235,10 +248,12 @@ PR本文の「対応した規則ID」節と「受入IDごとの結果」表の�
 | --- | --- | --- |
 | `spec-conformance-reviewer` | 常に | 規則IDの充足、`data/` を正とする原則、範囲外の追加の禁止、ID一覧の要約 |
 | `test-reviewer` | 常に | TDDの記録、DoDの受入IDの成立、壊してはいけないもの |
-| `architecture-reviewer` | 常に | 技術設計の規約、Godot / GDScript の正しさ（Context7で確認） |
-| `screen-reviewer` | Issueに `area:ui` が付いているとき | 画面文書との一致、手動確認の手順 |
+| `architecture-reviewer` | 差分に実装のファイル（`.gd`、`.tscn`、`.tres`、`project.godot`、`.import`）の変更があるとき。設計書とデータだけの変更なら起動しない | 技術設計の規約、Godot / GDScript の正しさ（Context7で確認） |
+| `screen-reviewer` | Issueに `area:ui` が付いていて、差分にシーン・UIスクリプト・画面文書・素材（`scenes/`、`scripts/ui/`、`docs/spec/screens/`、`assets/`）の変更があるとき | 画面文書との一致、手動確認の手順 |
 
-**2ラウンド目（同じサイクルの2回目）に起動するのは、1ラウンド目で should 以上の指摘を出し、その処置で修正があった担当だけにする。** 承認または該当なしで、should 以上の指摘がなかった担当は起動しない。ただし、1ラウンド目の修正が、起動しない担当の観点に及ぶ場合（例：画面のシーンを直した場合の `screen-reviewer`、設計書の規則を直した場合の `spec-conformance-reviewer`）は、その担当も起動する。起動しなかった担当と理由は、packet.md の「起動したレビュー担当」に書く。
+起動しなかった担当と理由は、packet.md の「起動したレビュー担当」に書く。
+
+**2ラウンド目（同じサイクルの2回目）に起動するのは、1ラウンド目で should 以上の指摘を出し、その処置で修正があった担当だけにする。** 承認または該当なしで、should 以上の指摘がなかった担当は起動しない。ただし、1ラウンド目の修正が、起動しない担当の観点に及ぶ場合（例：画面のシーンを直した場合の `screen-reviewer`、設計書の規則を直した場合の `spec-conformance-reviewer`）は、その担当も起動する。
 
 各エージェントへのプロンプトには、次を書く。
 
@@ -285,9 +300,9 @@ git push -u origin {type}/{N}-{slug}
 
 GDScript と Godot を初めて扱うユーザーが、PRをレビューするときの補足資料を作る。解説の中身は `code-explainer` が書き、メインエージェントは材料の用意と、スクリプトでの検証・書き出しを行う。**レビュー（手順5）の回数には数えず、資料のためのコミットもしない。**
 
-1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M main...HEAD -- '*.gd' ':(exclude)tests'`（`tests/` は解説しない）。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
+1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M origin/main...HEAD -- '*.gd' ':(exclude)tests'`（`tests/` は解説しない）。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
 2. `CODE_GUIDE_DIR` と `node --version` を確かめる。どちらかが使えない場合は、資料を作らずに手順10で理由を報告する（作ったことにしない）
-3. `git diff main...HEAD` を `cycle-<c>/code-guide-diff.patch` に保存する
+3. `git diff origin/main...HEAD` を `cycle-<c>/code-guide-diff.patch` に保存する
 4. `code-explainer` を呼び出す。プロンプトには次の絶対パスと値を書く
    - `criteria/code-guide.md`、`criteria/known-terms.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
    - Issue本文（最後のラウンドの `issue.md`）、`code-guide-diff.patch`、`context7-log.md`

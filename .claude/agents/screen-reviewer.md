@@ -2,6 +2,7 @@
 name: screen-reviewer
 description: issue-implementing の手順5で、area:ui ラベルの付いたIssueに限り、画面の実装が画面文書と全画面に共通する表示の規約（表示・遷移・キー割り当て・文言・入力の遮断・共通UI部品）に一致し、ユーザーが行う手動確認の手順に不足がないかを判定する画面レビューの専門家。ゲームルールの規則IDの充足は spec-conformance-reviewer、ヘッドレステストの成立は test-reviewer、ノードやControlのAPIの正しさと責務の層は architecture-reviewer に任せ、このエージェントでは扱わない。
 tools: Read, Grep, Glob
+model: sonnet
 ---
 
 # 画面レビュー

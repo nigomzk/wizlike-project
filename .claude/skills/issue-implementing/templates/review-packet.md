@@ -15,7 +15,7 @@
 | ラベル | <area:..., type:...> |
 | モード | 初回 / レビュー対応 |
 | ブランチ | <{type}/{N}-{slug}> |
-| 比較 | main...HEAD（<HEADの短いハッシュ>） |
+| 比較 | origin/main...HEAD（<HEADの短いハッシュ>） |
 | 起動したレビュー担当 | spec-conformance-reviewer, test-reviewer, architecture-reviewer<, screen-reviewer>（2ラウンド目以降は、起動しなかった担当とその理由も書く） |
 | 確認の範囲 | 全体（1ラウンド目） / 前ラウンドの修正のみ（2ラウンド目以降） |
 

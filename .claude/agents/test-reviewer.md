@@ -2,6 +2,7 @@
 name: test-reviewer
 description: issue-implementing の手順5で、テストを先に書いて失敗を確認した記録があるか、DoDの受入IDが空振りやスキップでなく実際に検証されて成功しているか、壊してはいけない受入IDを守っているかを判定するテストレビューの専門家。規則IDの充足は spec-conformance-reviewer、テスト以外のコードの設計規約とGodot APIの正しさは architecture-reviewer、画面の手動確認の中身は screen-reviewer に任せ、このエージェントでは扱わない。
 tools: Read, Grep, Glob
+model: sonnet
 ---
 
 # テストレビュー
