@@ -9,6 +9,7 @@ const PLACEHOLDER_SCENE := "res://scenes/ui/placeholder.tscn"
 ## 状態 -> 画面シーン。画面を実装するIssueが、ここへ行を足す。
 const SCREEN_SCENES := {
 	GameFlowScript.State.TITLE: "res://scenes/ui/title.tscn",
+	GameFlowScript.State.SETTINGS: "res://scenes/ui/settings.tscn",
 }
 
 ## 現在表示している画面

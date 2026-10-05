@@ -1,0 +1,78 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/settings.gd" id="1_settings"]
+
+[node name="Settings" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_settings")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MenuPanel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+
+[node name="Inner" type="PanelContainer" parent="Center/MenuPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Items" type="VBoxContainer" parent="Center/MenuPanel/Inner"]
+layout_mode = 2
+
+[node name="VolumeRow" type="HBoxContainer" parent="Center/MenuPanel/Inner/Items"]
+layout_mode = 2
+
+[node name="VolumeLabel" type="Label" parent="Center/MenuPanel/Inner/Items/VolumeRow"]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+text = "マスター音量"
+vertical_alignment = 1
+
+[node name="Volume" type="HSlider" parent="Center/MenuPanel/Inner/Items/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+step = 1.0
+value = 70.0
+
+[node name="VolumeValue" type="Label" parent="Center/MenuPanel/Inner/Items/VolumeRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 40)
+layout_mode = 2
+text = "70"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="FullscreenRow" type="HBoxContainer" parent="Center/MenuPanel/Inner/Items"]
+layout_mode = 2
+
+[node name="FullscreenLabel" type="Label" parent="Center/MenuPanel/Inner/Items/FullscreenRow"]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+text = "フルスクリーン"
+vertical_alignment = 1
+
+[node name="Fullscreen" type="Button" parent="Center/MenuPanel/Inner/Items/FullscreenRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "OFF"
+
+[node name="Back" type="Button" parent="Center/MenuPanel/Inner/Items"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "戻る"
