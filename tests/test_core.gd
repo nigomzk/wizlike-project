@@ -12,6 +12,37 @@ const UI_SCRIPTS_DIR := "res://scripts/ui"
 const KNOWN_SCENES := ["res://scenes/ui/title.tscn", "res://scenes/ui/placeholder.tscn"]
 ## 画面のスクリプトに現れてはならない語（ARC-208）
 const FORBIDDEN_SCRIPT_WORDS := ["add_theme_", "theme_override"]
+## A07 が GameFlow に渡す、設定とスロットの一時的な置き場所（TST-107）
+const A07_TMP_ROOT := "user://test_core_a07"
+
+
+## エンジンが出したエラー（push_error を含む）の件数を数える。A07 で、同じシグナルへの二重の結線を検出するため。
+## `_log_error` は複数のスレッドから呼ばれうるため、`Mutex` で守る。
+class EngineErrorCounter extends Logger:
+	var _mutex := Mutex.new()
+	var _count := 0
+
+	func _log_error(
+			_function: String,
+			_file: String,
+			_line: int,
+			_code: String,
+			_rationale: String,
+			_editor_notify: bool,
+			error_type: int,
+			_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		if error_type != ERROR_TYPE_ERROR:
+			return
+		_mutex.lock()
+		_count += 1
+		_mutex.unlock()
+
+	func count() -> int:
+		_mutex.lock()
+		var n := _count
+		_mutex.unlock()
+		return n
 
 
 func run(t) -> void:
@@ -148,6 +179,9 @@ func _a07(t) -> void:
 	if flow == null or host == null:
 		main.free()
 		return
+	# 開発者の実際の設定とスロットに触れないよう、置き場所を差し替える（TST-107）
+	flow.save_dir = A07_TMP_ROOT + "/saves"
+	flow.settings_path = A07_TMP_ROOT + "/settings.cfg"
 	t.root.add_child(main)
 	# 初期フォーカスは遅延して置かれるため、1フレーム待つ
 	await t.process_frame
@@ -191,7 +225,22 @@ func _a07(t) -> void:
 	flow.unblock_input(&"modal")
 	t.check("A07", true, buttons[0].has_focus())
 
+	# 画面の中の項目がツリーから外れて入り直しても、結線は1つのままで、マウスの移動でフォーカスが移る
+	var item: Control = buttons[1]
+	var items_parent := item.get_parent()
+	var errors := EngineErrorCounter.new()
+	OS.add_logger(errors)
+	items_parent.remove_child(item)
+	items_parent.add_child(item)
+	items_parent.move_child(item, 1)
+	OS.remove_logger(errors)
+	t.check("A07", 0, errors.count())
+	t.check("A07", 1, item.gui_input.get_connections().filter(func(c): return c.callable.get_object() == host).size())
+	t.root.push_input(_mouse_motion_over(item, Vector2(4, 0)), true)
+	t.check("A07", true, item.has_focus())
+
 	_free_main(t, main)
+	_remove_dir(A07_TMP_ROOT)
 
 
 ## 項目の中央へ、指定した移動量でマウスを動かしたイベント（ビューポートの座標）。
@@ -210,3 +259,13 @@ func _buttons(root: Node) -> Array:
 func _free_main(t, main: Node) -> void:
 	t.root.remove_child(main)
 	main.free()
+
+
+func _remove_dir(dir_path: String) -> void:
+	if not DirAccess.dir_exists_absolute(dir_path):
+		return
+	for file_name in DirAccess.get_files_at(dir_path):
+		DirAccess.remove_absolute(dir_path + "/" + file_name)
+	for sub in DirAccess.get_directories_at(dir_path):
+		_remove_dir(dir_path + "/" + sub)
+	DirAccess.remove_absolute(dir_path)
