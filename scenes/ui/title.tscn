@@ -21,37 +21,43 @@ grow_vertical = 2
 
 [node name="Menu" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_type_variation = &"StackL"
 
 [node name="GameName" type="Label" parent="Center/Menu"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 56
+theme_type_variation = &"GameTitleLabel"
 text = "迷宮踏査録"
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="Center/Menu"]
-custom_minimum_size = Vector2(0, 24)
+[node name="MenuPanel" type="PanelContainer" parent="Center/Menu"]
 layout_mode = 2
 
-[node name="NewGame" type="Button" parent="Center/Menu"]
+[node name="Inner" type="PanelContainer" parent="Center/Menu/MenuPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Items" type="VBoxContainer" parent="Center/Menu/MenuPanel/Inner"]
+layout_mode = 2
+
+[node name="NewGame" type="Button" parent="Center/Menu/MenuPanel/Inner/Items"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2
 text = "はじめから"
 
-[node name="LoadGame" type="Button" parent="Center/Menu"]
+[node name="LoadGame" type="Button" parent="Center/Menu/MenuPanel/Inner/Items"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2
 text = "つづきから"
 
-[node name="Settings" type="Button" parent="Center/Menu"]
+[node name="Settings" type="Button" parent="Center/Menu/MenuPanel/Inner/Items"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2
 text = "設定"
 
-[node name="Quit" type="Button" parent="Center/Menu"]
+[node name="Quit" type="Button" parent="Center/Menu/MenuPanel/Inner/Items"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
 layout_mode = 2

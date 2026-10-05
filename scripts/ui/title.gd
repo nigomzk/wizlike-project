@@ -15,9 +15,6 @@ func _ready() -> void:
 	_buttons[1].pressed.connect(func(): _flow.open_load())
 	_buttons[2].pressed.connect(func(): _flow.open_settings())
 	_buttons[3].pressed.connect(func(): _flow.quit_app())
-	# マウスを載せた項目へフォーカス枠を移す。押さずにマウスだけで巡回できる（U03）
-	for button in _buttons:
-		button.mouse_entered.connect(button.grab_focus)
 	# ↑ / ↓ も、Tab / Shift+Tab と同じく端から反対の端へ巡回させる（U03）
 	_buttons[0].focus_neighbor_top = _buttons[0].get_path_to(_buttons[-1])
 	_buttons[-1].focus_neighbor_bottom = _buttons[-1].get_path_to(_buttons[0])

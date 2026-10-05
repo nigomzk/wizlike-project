@@ -1,6 +1,7 @@
 extends Control
 ## 状態から画面シーンへの対応表を持ち、GameFlow の状態に合わせて画面を差し替える（ARC-200, ARC-205）。
 ## 対応のない状態は仮画面「準備中」を出す（PRS-208）。入力の遮断中は背景の入力を止める（FLW-200）。
+## マウスを動かして載せた項目へフォーカスを移す処理を、画面ごとではなくここで一括して付ける（ARC-209）。
 
 const GameFlowScript := preload("res://scripts/core/game_flow.gd")
 
@@ -29,6 +30,8 @@ func _ready() -> void:
 	# 遮断中のキーは、フォーカス移動へ回さずここで受け止める
 	input_blocker.gui_input.connect(func(_event: InputEvent): input_blocker.accept_event())
 	add_child(input_blocker)
+	# 画面へ後から追加された項目にも、ツリーに入った時点で結ぶ（ARC-209）
+	get_tree().node_added.connect(_on_node_added)
 	if _flow == null:
 		bind(get_node_or_null("../GameFlow"))
 
@@ -59,10 +62,42 @@ func _show_screen(state: GameFlowScript.State) -> void:
 	screen.setup(_flow)
 	current_screen = screen
 	add_child(current_screen)
+	# ScreenHost がツリーに入る前に表示した画面は node_added に届かないので、ここでも結ぶ（ARC-209）
+	_follow_mouse_focus(current_screen)
+	for node in current_screen.find_children("*", "Control", true, false):
+		_follow_mouse_focus(node)
 	if input_blocker != null:
 		move_child(input_blocker, -1)
 	# `_ready` の中より、遅延させたほうが確実にフォーカスが付く
 	current_screen.call_deferred("grab_initial_focus")
+
+
+func _on_node_added(node: Node) -> void:
+	if current_screen != null and (node == current_screen or current_screen.is_ancestor_of(node)):
+		_follow_mouse_focus(node)
+
+
+## 表示中の画面の Control に、マウスの移動でフォーカスを移す処理を結ぶ（ARC-209）。
+## 項目がツリーから外れて入り直したときに二重に結ばないよう、結線済みなら何もしない。
+func _follow_mouse_focus(node: Node) -> void:
+	var control := node as Control
+	if control == null:
+		return
+	var handler := _on_item_gui_input.bind(control)
+	if not control.gui_input.is_connected(handler):
+		control.gui_input.connect(handler)
+
+
+## マウスを実際に動かして載せた項目へ、フォーカスを移す（ARC-209）。
+## `mouse_entered` は静止したカーソルの下に画面が差し替わったときにも届くため使わない。
+## 移動量のない移動も、マウスを動かしていないものとして扱う。入力の遮断中は移さない（FLW-200）。
+func _on_item_gui_input(event: InputEvent, item: Control) -> void:
+	var motion := event as InputEventMouseMotion
+	if motion == null or motion.relative == Vector2.ZERO:
+		return
+	if item.focus_mode != Control.FOCUS_ALL or item.has_focus() or _flow.is_input_blocked():
+		return
+	item.grab_focus()
 
 
 func _on_input_block_changed(blocked: bool) -> void:

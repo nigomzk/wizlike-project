@@ -143,10 +143,7 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", TITLE_ITEMS, buttons.map(func(b): return b.text))
 		# 最初の項目にフォーカスがある（キーボードのみで巡回できる。PRS-007）
 		t.check("FL07", true, buttons[0].has_focus())
-		# マウスを載せた項目へフォーカス枠が移る。押さずにマウスだけで4項目を巡回できる（U03）
-		for button in buttons:
-			button.mouse_entered.emit()
-			t.check("FL07", true, button.has_focus())
+		# マウスを動かして載せた項目へのフォーカス移動は、ScreenHost の共通の仕組みとして A07 で確かめる（ARC-209）
 		# ↑ / ↓ も Tab / Shift+Tab と同じく、端から反対の端へ巡回する（U03）
 		for i in buttons.size():
 			var next_button: Control = buttons[(i + 1) % buttons.size()]

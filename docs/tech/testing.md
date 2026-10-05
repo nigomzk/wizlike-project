@@ -63,10 +63,10 @@
 | S | セーブとロード | `spec/70-save.md`（S01〜S06） |
 | W | Windows実機・手動（通し試験） | `tech/presentation.md`（W01〜W08） |
 | T | テスト基盤 | `tech/testing.md`（T01〜T04） |
-| A | 構成と共通サービス | `tech/architecture.md`（A01〜A05） |
-| U | 画面ごとの手動確認 | `spec/screens/` の各画面文書（U01〜U35） |
+| A | 構成と共通サービス | `tech/architecture.md`（A01〜A07） |
+| U | 画面ごとの手動確認 | `spec/screens/` の各画面文書（U01〜U35, U38） |
 
-自動検証は T, A, D, FL, F, G, L, P, I, E, B, Q, S の計77件。手動検証は W の8件と U の35件。
+自動検証は T, A, D, FL, F, G, L, P, I, E, B, Q, S の計79件。手動検証は W の8件と U の36件。
 
 ---
 
