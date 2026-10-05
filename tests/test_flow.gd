@@ -2,16 +2,53 @@ extends RefCounted
 ## TST-406: 状態遷移（FL）のテスト。
 ## 未実装のIDは run_all.gd が自動でスキップとして報告する（TST-410）。
 
-const IDS := ["FL01", "FL02", "FL03", "FL04", "FL06", "FL07", "FL08"]
+const IDS := ["FL01", "FL02", "FL03", "FL04", "FL06", "FL07", "FL08", "FL09"]
 
 const MAIN_SCENE := "res://scenes/main.tscn"
 const GAME_FLOW_SCRIPT := "res://scripts/core/game_flow.gd"
 const TITLE_ITEMS := ["はじめから", "つづきから", "設定", "終了"]
 const SLOT_COUNT := 5
 
+const TITLE_SCENE := "res://scenes/ui/title.tscn"
+const BACKGROUND_SCENE := "res://scenes/ui/components/screen_background.tscn"
+const GAME_THEME := "res://scenes/ui/components/game_theme.tres"
+const TITLE_BACKGROUND := "res://assets/backgrounds/title.png"
+const MISSING_BACKGROUND := "res://assets/backgrounds/no_such_screen.png"
+# PRS-300 の色のトークン（bg_base、bg_scrim）
+const BG_BASE := Color("#0E1420")
+const BG_SCRIM := Color(BG_BASE, 0.35)
+
+
+## エンジンが出したエラーと警告の件数を数える（FL09。欠落した画像でエンジンの出力が出ないことの確認）。
+## `_log_error` は複数のスレッドから呼ばれうるため、`Mutex` で守る。
+class EngineLogCounter extends Logger:
+	var _mutex := Mutex.new()
+	var _count := 0
+
+	func _log_error(
+			_function: String,
+			_file: String,
+			_line: int,
+			_code: String,
+			_rationale: String,
+			_editor_notify: bool,
+			_error_type: int,
+			_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		_mutex.lock()
+		_count += 1
+		_mutex.unlock()
+
+	func count() -> int:
+		_mutex.lock()
+		var n := _count
+		_mutex.unlock()
+		return n
+
 
 func run(t) -> void:
 	await _fl07(t)
+	await _fl09(t)
 
 
 # FL07: TITLEで各項目を選ぶ（FLW-001, FLW-108, FLW-112, SAV-003）
@@ -191,6 +228,104 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 	t.check("FL07", before, _snapshot(save_dir))
 	t.root.remove_child(main)
 	main.free()
+
+
+# FL09: タイトルの背景画像と、画面背景の部品（PRS-607, PRS-608, PRS-008, PRS-602, FLW-200）
+func _fl09(t) -> void:
+	# 画像：存在し、Texture2D として読め、1920×1080である（PRS-608）
+	t.check("FL09", true, ResourceLoader.exists(TITLE_BACKGROUND))
+	var texture: Texture2D = null
+	if ResourceLoader.exists(TITLE_BACKGROUND):
+		texture = load(TITLE_BACKGROUND) as Texture2D
+	t.check("FL09", true, texture != null)
+	if texture != null:
+		t.check("FL09", Vector2(1920, 1080), texture.get_size())
+
+	# 地と暗幕の色は、共通Theme の Type Variation で持つ（PRS-300, ARC-208）
+	var theme := load(GAME_THEME) as Theme
+	t.check("FL09", true, theme != null)
+	if theme != null:
+		for variation in [[&"ScreenBase", BG_BASE], [&"ScreenScrim", BG_SCRIM]]:
+			t.check("FL09", &"PanelContainer", theme.get_type_variation_base(variation[0]))
+			var style := theme.get_stylebox(&"panel", variation[0]) as StyleBoxFlat
+			t.check("FL09", true, style != null)
+			if style != null:
+				t.check("FL09", true, style.bg_color.is_equal_approx(variation[1]))
+
+	var packed := load(TITLE_SCENE) as PackedScene
+	t.check("FL09", true, packed != null)
+	if packed == null:
+		return
+	var title: Control = packed.instantiate()
+	t.root.add_child(title)
+	await t.process_frame
+
+	# 背景は Center より前の最初の子で、全面に広がる。ゲーム名と4項目は背景の前面にある（PRS-607）
+	var background: Control = title.get_child(0)
+	var center: Node = title.get_node_or_null("Center")
+	t.check("FL09", BACKGROUND_SCENE, background.scene_file_path)
+	if background.scene_file_path != BACKGROUND_SCENE:
+		t.root.remove_child(title)
+		title.free()
+		return
+	t.check("FL09", true, center != null and background.get_index() < center.get_index())
+	t.check("FL09", t.root.get_visible_rect().size, background.size)
+
+	# 背景のすべてのノードが、クリックもフォーカスも受けず、画面を押し広げない（FLW-200, PRS-007）
+	var parts: Array = [background] + background.find_children("*", "Control", true, false)
+	t.check("FL09", 4, parts.size())
+	for part: Control in parts:
+		t.check("FL09", Control.MOUSE_FILTER_IGNORE, part.mouse_filter)
+		t.check("FL09", Control.FOCUS_NONE, part.focus_mode)
+		t.check("FL09", Vector2.ZERO, part.get_combined_minimum_size())
+
+	var base: Control = background.get_node_or_null("%Base")
+	var image: TextureRect = background.get_node_or_null("%Image")
+	var scrim: Control = background.get_node_or_null("%Scrim")
+	t.check("FL09", true, image != null and scrim != null and base != null)
+	if image == null or scrim == null or base == null:
+		title.free()
+		return
+	# 下から、地、画像、暗幕の順に重なる。画像は縦横比を保って全面を覆う（PRS-608, PRS-008）
+	t.check("FL09", [base, image, scrim], background.get_children())
+	t.check("FL09", &"ScreenBase", base.theme_type_variation)
+	t.check("FL09", &"ScreenScrim", scrim.theme_type_variation)
+	t.check("FL09", TextureRect.EXPAND_IGNORE_SIZE, image.expand_mode)
+	t.check("FL09", TextureRect.STRETCH_KEEP_ASPECT_COVERED, image.stretch_mode)
+
+	# 画像がある間は、画像の上に暗幕を重ねる（PRS-008）
+	t.check("FL09", TITLE_BACKGROUND, background.texture_path)
+	t.check("FL09", texture, image.texture)
+	t.check("FL09", [true, true, true], [base.visible, image.visible, scrim.visible])
+
+	# 存在しないパスでは、画像も暗幕も出さず、bg_base の単色になる。実行時エラーを出さない（PRS-607, PRS-602）
+	# エンジンのエラーと警告も出さない。この区間の件数を数える（PRS-607）
+	t.check("FL09", false, ResourceLoader.exists(MISSING_BACKGROUND))
+	var logs := EngineLogCounter.new()
+	OS.add_logger(logs)
+	background.texture_path = MISSING_BACKGROUND
+	t.check("FL09", null, image.texture)
+	t.check("FL09", [true, false, false], [base.visible, image.visible, scrim.visible])
+	# パスを空にしても同じ。画像のパスを戻すと、再び画像と暗幕が出る
+	background.texture_path = ""
+	t.check("FL09", [true, false, false], [base.visible, image.visible, scrim.visible])
+	background.texture_path = TITLE_BACKGROUND
+	t.check("FL09", [true, true, true], [base.visible, image.visible, scrim.visible])
+
+	# 存在しないパスのまま起動した場合も、最初から単色になる
+	var missing: Control = load(BACKGROUND_SCENE).instantiate()
+	missing.texture_path = MISSING_BACKGROUND
+	t.root.add_child(missing)
+	await t.process_frame
+	t.check("FL09", [true, false, false], [
+		missing.get_node("%Base").visible, missing.get_node("%Image").visible, missing.get_node("%Scrim").visible])
+	t.root.remove_child(missing)
+	missing.free()
+	OS.remove_logger(logs)
+	t.check("FL09", 0, logs.count())
+
+	t.root.remove_child(title)
+	title.free()
 
 
 func _action_event(action: StringName) -> InputEventAction:

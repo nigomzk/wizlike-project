@@ -10,9 +10,9 @@ Issueを置くための段階と、全Issueに共通する要件を定義する�
 
 | 段階 | 名前 | 主な内容 | 完了条件（受入ID） |
 | --- | --- | --- | --- |
-| A | 起動 | `project.godot`（Godot 4.5.1固定）、ディレクトリ雛形、`main.tscn` の骨格、テスト基盤、Noto Sans JPと `THIRD_PARTY_NOTICES.md`、共通Theme と Noto Serif JP、`GameFlow` の骨格、開発中の仮画面（PRS-208）、タイトル、設定 | T01〜T04, A01, A06, A07, FL07, U03〜U05, U38 |
+| A | 起動 | `project.godot`（Godot 4.5.1固定）、ディレクトリ雛形、`main.tscn` の骨格、テスト基盤、Noto Sans JPと `THIRD_PARTY_NOTICES.md`、共通Theme と Noto Serif JP、`GameFlow` の骨格、開発中の仮画面（PRS-208）、タイトル（背景画像と、共通UI部品「画面背景」を含む）、設定 | T01〜T04, A01, A06, A07, FL07, FL09, U03〜U05, U36〜U38 |
 | B | データ | 定義Resource型、`data/` のCSVの読込、バリデータ、起動不可のエラー画面 | D01, D03, U07 |
-| C | 街とギルド | `GameSession` と `RngService`、ニューゲーム、街、共通UI部品、仮の顔画像と街の背景、ギルド、`InventoryRules` と能力値の算出、メニューの骨格・能力・装備 | A02〜A05, F07, F08, G01〜G05, P01, I01, I02, I05, I06, I08, FL06, FL08, U01, U02, U06, U08, U11, U13〜U15, U16（習得できない理由の表示まで）, U27, U34（死亡・毒の表示を除く）, U35 |
+| C | 街とギルド | `GameSession` と `RngService`、ニューゲーム、街、共通UI部品、仮の顔画像と街の背景（段階Aの「画面背景」を使う）、ギルド、`InventoryRules` と能力値の算出、メニューの骨格・能力・装備 | A02〜A05, F07, F08, G01〜G05, P01, I01, I02, I05, I06, I08, FL06, FL08, U01, U02, U06, U08, U11, U13〜U15, U16（習得できない理由の表示まで）, U27, U34（死亡・毒の表示を除く）, U35 |
 | D | セーブ | `SaveService`、セーブ・ロード画面、つづきから、未保存の確認 | S01〜S06, FL01, U12, U23, U24 |
 | E | 探索 | 6フロアの仮マップ、`FloorCompiler`、`DungeonBuilder`、出発、移動、ミニマップ、地図、イベント、遭遇歩数、探索中のメニュー | D02, D04, E01〜E08, P02, FL02, FL03, U22, U25, U26, U28〜U31 |
 | F | 戦闘 | `BattleRules`、`BattleSession`、戦闘画面、報酬、`GrowthRules`、全滅 | B01〜B10, L01〜L03, I04, I07, U09, U16（習得の実行）, U32, U33, U34（死亡・毒の表示） |

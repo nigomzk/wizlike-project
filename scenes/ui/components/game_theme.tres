@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=7 format=3]
+[gd_resource type="Theme" load_steps=9 format=3]
 
 [ext_resource type="FontVariation" path="res://assets/fonts/noto_sans_jp_400.tres" id="1_font"]
 [ext_resource type="FontVariation" path="res://assets/fonts/noto_serif_jp_700.tres" id="2_serif"]
@@ -58,6 +58,12 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="screen_base"]
+bg_color = Color(0.054902, 0.0784314, 0.12549, 1)
+
+[sub_resource type="StyleBoxFlat" id="screen_scrim"]
+bg_color = Color(0.054902, 0.0784314, 0.12549, 0.35)
+
 [resource]
 default_font = ExtResource("1_font")
 default_font_size = 24
@@ -93,6 +99,10 @@ OptionButton/styles/focus = SubResource("item_focus")
 PanelContainer/styles/panel = SubResource("panel_outer")
 PanelInner/base_type = &"PanelContainer"
 PanelInner/styles/panel = SubResource("panel_inner")
+ScreenBase/base_type = &"PanelContainer"
+ScreenBase/styles/panel = SubResource("screen_base")
+ScreenScrim/base_type = &"PanelContainer"
+ScreenScrim/styles/panel = SubResource("screen_scrim")
 StackL/base_type = &"VBoxContainer"
 StackL/constants/separation = 24
 Tree/styles/focus = SubResource("item_focus")

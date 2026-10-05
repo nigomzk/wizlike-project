@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/title.gd" id="1_title"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/screen_background.tscn" id="2_bg"]
 
 [node name="Title" type="Control"]
 layout_mode = 3
@@ -10,6 +11,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_title")
+
+[node name="Background" parent="." instance=ExtResource("2_bg")]
+layout_mode = 1
+texture_path = "res://assets/backgrounds/title.png"
 
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 1
