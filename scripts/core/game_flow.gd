@@ -23,11 +23,29 @@ enum State {
 	SETTINGS,
 }
 
+## 設定ファイルの区画とキー（PRS-405）。
+const SETTINGS_SECTION := "settings"
+const KEY_MASTER_VOLUME := "master_volume"
+const KEY_FULLSCREEN := "fullscreen"
+## マスター音量の範囲と初期値（PRS-400）。
+const MIN_MASTER_VOLUME := 0
+const MAX_MASTER_VOLUME := 100
+const DEFAULT_MASTER_VOLUME := 70
+## ウィンドウの最小サイズ（PRS-000）。
+const MIN_WINDOW_SIZE := Vector2i(960, 540)
+
 signal state_changed(new_state: State, old_state: State)
 ## 入力遮断の有無が切り替わったときに送る。
 signal input_block_changed(blocked: bool)
+## 設定（音量・フルスクリーン）が変わったときに送る。設定画面は、この通知で表示を更新する（ARC-205）。
+signal settings_changed
 
 var state: State = State.BOOT
+
+## 設定（ARC-301, PRS-400）。進行中のセッションとは別に持ち、TITLEでも読み書きできる（FLW-112, FLW-301, PRS-405）。
+## 画面はここから読み、コピーを持たない（ARC-204）。変更は `set_master_volume()` と `set_fullscreen()` で行う。
+var master_volume: int = DEFAULT_MASTER_VOLUME
+var fullscreen: bool = false
 
 ## 進行中のセッション（ARC-202）。セッションの実装までは常に null で、TITLEの間は存在しない（FLW-108）。
 var session: RefCounted = null
@@ -38,6 +56,8 @@ var quit_handler: Callable = Callable()
 ## セーブの置き場所と設定ファイルのパス。セーブと設定の実装が参照する。
 var save_dir: String = "user://saves"
 var settings_path: String = "user://settings.cfg"
+## フルスクリーンの反映。空の Callable の場合は、ウィンドウのモードを切り替える。引数は ON かどうか（TST-107）。
+var fullscreen_handler: Callable = Callable()
 
 ## 入力を遮断している理由の集合（FLW-204）。
 var _input_blockers: Dictionary = {}
@@ -49,10 +69,102 @@ func _ready() -> void:
 	boot()
 
 
-## BOOT から TITLE へ進む（FLW-015）。データベースの読込と設定の読込は、それぞれの実装時にここへ加える。
+## BOOT から TITLE へ進む（FLW-015）。データベースの読込は、その実装時にここへ加える。
+## 起動時に、ウィンドウの最小サイズを設定し（PRS-000）、設定を読み込んで反映する（PRS-405）。
 func boot() -> void:
 	if state == State.BOOT:
+		get_window().min_size = MIN_WINDOW_SIZE
+		load_settings()
 		_change_state(State.TITLE)
+
+
+# --- 設定（PRS-4xx） ---
+
+## 設定ファイルを読んで反映する。ファイルがない、読めない、値が範囲外や型違いの場合は、その項目を初期値か範囲内の値にする。
+## 読むだけで、ファイルは書かない（PRS-400, PRS-405）。
+func load_settings() -> void:
+	master_volume = DEFAULT_MASTER_VOLUME
+	fullscreen = false
+	var config := ConfigFile.new()
+	if config.load(settings_path) == OK:
+		var volume = config.get_value(SETTINGS_SECTION, KEY_MASTER_VOLUME, DEFAULT_MASTER_VOLUME)
+		if volume is int or volume is float:
+			master_volume = clampi(roundi(volume), MIN_MASTER_VOLUME, MAX_MASTER_VOLUME)
+		var on = config.get_value(SETTINGS_SECTION, KEY_FULLSCREEN, false)
+		if on is bool:
+			fullscreen = on
+	_apply_master_volume()
+	if fullscreen:
+		_apply_fullscreen()
+	elif _window_is_fullscreen():
+		# コマンドラインの `--fullscreen` で起動した場合は、保存せずに、その状態を設定の値として扱う
+		fullscreen = true
+
+
+## マスター音量を 0〜100 に収めて、反映して保存する（PRS-400, PRS-401）。設定の変更で、セッションとゲームの状態は変えない（FLW-301）。
+func set_master_volume(value: int) -> void:
+	var next := clampi(value, MIN_MASTER_VOLUME, MAX_MASTER_VOLUME)
+	if next == master_volume:
+		return
+	master_volume = next
+	_apply_master_volume()
+	_save_settings()
+	settings_changed.emit()
+
+
+## フルスクリーンの ON / OFF を、反映して保存する（PRS-001, PRS-401）。
+func set_fullscreen(on: bool) -> void:
+	if on == fullscreen:
+		return
+	fullscreen = on
+	_apply_fullscreen()
+	_save_settings()
+	settings_changed.emit()
+
+
+## F11 と設定画面から呼ぶ、フルスクリーンの切替（PRS-108）。
+func toggle_fullscreen() -> void:
+	set_fullscreen(not fullscreen)
+
+
+## F11 は、どの画面でも、入力の遮断中でも受け付ける（PRS-108）。ゲームの状態に触れないため、遮断の対象にしない。
+func _input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.keycode == KEY_F11:
+		get_viewport().set_input_as_handled()
+		toggle_fullscreen()
+
+
+## 音量をマスターバスへ反映する。0 は消音にする（dBでは表せないため）。
+func _apply_master_volume() -> void:
+	var bus := AudioServer.get_bus_index(&"Master")
+	AudioServer.set_bus_mute(bus, master_volume == MIN_MASTER_VOLUME)
+	if master_volume > MIN_MASTER_VOLUME:
+		AudioServer.set_bus_volume_db(bus, linear_to_db(master_volume / float(MAX_MASTER_VOLUME)))
+
+
+func _apply_fullscreen() -> void:
+	if fullscreen_handler.is_valid():
+		fullscreen_handler.call(fullscreen)
+	elif fullscreen:
+		get_window().mode = Window.MODE_FULLSCREEN
+	else:
+		get_window().mode = Window.MODE_WINDOWED
+
+
+func _window_is_fullscreen() -> bool:
+	return get_window().mode in [Window.MODE_FULLSCREEN, Window.MODE_EXCLUSIVE_FULLSCREEN]
+
+
+## 設定を即時に保存する（PRS-401）。失敗してもメモリ上の値は保ち、警告を出す。
+func _save_settings() -> void:
+	var config := ConfigFile.new()
+	config.set_value(SETTINGS_SECTION, KEY_MASTER_VOLUME, master_volume)
+	config.set_value(SETTINGS_SECTION, KEY_FULLSCREEN, fullscreen)
+	DirAccess.make_dir_recursive_absolute(settings_path.get_base_dir())
+	var error := config.save(settings_path)
+	if error != OK:
+		push_warning("Failed to save settings to %s (error %d)" % [settings_path, error])
 
 
 func has_session() -> bool:
