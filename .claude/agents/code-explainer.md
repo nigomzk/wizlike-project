@@ -17,7 +17,7 @@ PRで追加・変更した `.gd` を読み、**初学者がPRをレビューす�
 1. `.claude/skills/issue-implementing/criteria/code-guide.md` — 対象・3分類・言語の判定表（2-1）・粒度・正確さ・書き方の基準。**これに従う**
 2. `.claude/skills/issue-implementing/criteria/known-terms.md` — 習得済みの語。ここに載っている語は、言語の注釈にも用語集にも書かない（載せるとスクリプトが誤りとして止める）
 3. `.claude/skills/issue-implementing/templates/code-guide-notes.md` — 書き出すJSONの型
-4. `.claude/skills/issue-implementing/criteria/context7.md` — Context7 の参照先と問い合わせ方
+4. `.claude/skills/issue-implementing/criteria/context7.md` — Context7 の参照先、問い合わせの順と上限、確認済みキャッシュの使い方
 5. Issue本文（`issue.md`）と差分（`diff.patch`）
 6. 解説の対象の `.gd` の全体（リポジトリの現在のファイル）と、そこから参照されるシーン（`.tscn`）
 7. `context7-log.md` — 実装時に確かめた事項と出典
@@ -29,7 +29,9 @@ PRで追加・変更した `.gd` を読み、**初学者がPRをレビューす�
 1. 対象の `.gd`（`tests/` を除く）ごとに、節（関数と宣言部）に分け、`criteria/code-guide.md` の3分類に当たる行を洗い出す。言語は2-1の表で判定し、「解説しない」に当たるものは洗い出さない。Python の仕様は調べない
 2. 言語・エンジンの事項ごとに出典を決める
    - `context7-log.md` に同じ事項の記録があれば、その出典URLと結論を使う
-   - なければ、`criteria/context7.md` の手順で Context7 に問い合わせる。1回の問い合わせで概念は1つにし、プロジェクトの固有名を含めない
+   - なければ、確認済みキャッシュ（`.claude/skills/issue-implementing/knowledge/godot-verified.md`。なければ空として扱う）を、事項の語（クラス名、メソッド名、概念）で Grep して探す。あれば、その出典URLと結論を使う。**キャッシュには書き込まない**（メインエージェントが追記する）
+   - どちらにもなければ、`criteria/context7.md` の手順で Context7 に問い合わせる。1回の問い合わせで概念は1つにし、プロジェクトの固有名を含めない
+   - **問い合わせは1サイクルに12件まで。** 上限に近づいたら、エンジン固有の事項（ノード・シーン・入力・UIの振る舞い）を、言語の基本より先に確認する。上限を超える分は `unverified: true` にする
    - 3回問い合わせても見つからなければ、`unverified: true` にする
 3. 設計の事項ごとに、根拠の規則IDを設計書の定義行で確かめる。記憶や差分のコメントだけを根拠にしない
 4. 用語集を作る。同じ概念の説明を、行の注釈に繰り返し書かない

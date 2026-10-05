@@ -26,7 +26,7 @@
 | エンジン | `engine` | Godot のエンジン仕様。ノード・シーン・入力・UIの振る舞い | `_ready` / `_unhandled_input` などの仮想メソッドが呼ばれる時機、シグナルの `connect` / `emit`、`call_deferred`、`queue_free`、フォーカスと入力の伝播、`mouse_filter`、`get_viewport()`、`SceneTree` |
 | 設計 | `design` | このプロジェクトの設計書が決めている構造と、その理由 | 画面が状態を持たず `setup(flow)` で GameFlow を受け取る（ARC-204）、入力の遮断を GameFlow が理由の集合で持つ（FLW-204） |
 
-- `criteria/context7.md` で Context7 の「確認が必須」に当たるものは、必ず言語かエンジンの注釈にする。ただし言語は2-1で「解説しない」とされたものを除く
+- `criteria/context7.md` の段階A（実装の前に必ず確認するもの）に当たるものは、必ず言語かエンジンの注釈にする。ただし言語は2-1で「解説しない」とされたものを除く
 - 同じ行が複数の分類に当たる場合は、分類ごとに注釈を分けてよい
 - コード中のコメントが既に十分に説明している設計の意図でも、規則IDの意味が初学者に伝わらない場合は設計の注釈を付ける
 
@@ -89,7 +89,7 @@
 
 | 分類 | 根拠 | 根拠がない場合 |
 | --- | --- | --- |
-| 言語・エンジン | Godot 4.5 の公式ドキュメント（`https://docs.godotengine.org/en/4.5/` 配下）の出典URLを `source` に書く。`context7-log.md` に記録がある事項はその出典を使い、ない事項は `criteria/context7.md` の手順で Context7 に問い合わせる | `unverified: true` を付け、本文に「公式ドキュメントで確認できなかった」と書く。推測を断定の形で書かない |
+| 言語・エンジン | Godot 4.5 の公式ドキュメント（`https://docs.godotengine.org/en/4.5/` 配下）の出典URLを `source` に書く。`context7-log.md` と確認済みキャッシュに記録がある事項はその出典を使い、ない事項は `criteria/context7.md` の手順で Context7 に問い合わせる（1サイクルの上限は12件） | `unverified: true` を付け、本文に「公式ドキュメントで確認できなかった」と書く。推測を断定の形で書かない |
 | 設計 | 根拠の規則IDを `ruleIds` に完全な形で書く（`ARC-204`。`ARC-2xx` や範囲の表記は使わない）。規則の意味は、`docs/index.md` から辿った設計書の原文で確かめる | 設計の注釈にしない |
 
 - 解説は、そのPRの HEAD のコードに対して書く。コードと食い違う説明を書かない
