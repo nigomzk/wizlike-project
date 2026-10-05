@@ -8,6 +8,8 @@
 // 使い方:
 //   node build-code-guide.mjs --notes <解説のJSON> --out <HTMLのパス> [--cycle <c>] [--cycle-base <sha>]
 //                             [--base origin/main] [--head HEAD] [--branch <名前>] [--pr <番号>]
+//   node build-code-guide.mjs --notes <解説のJSON> --validate-only true [--cycle <c>] [--cycle-base <sha>]
+//     --validate-only true は、検証だけを行い、HTMLを書き出さない（code-explainer が自分で誤りを直すために使う）
 //
 // 終了コード: 0 = 書き出した（警告は出力に出る） / 1 = 検証の誤りがある / 2 = 引数や git の誤り
 
@@ -20,6 +22,8 @@ const CATEGORIES = ["language", "engine", "design"];
 const EDGE_KINDS = ["tree", "signal", "call", "instance", "other"];
 const DOCS_PREFIX = "https://docs.godotengine.org/en/4.5/";
 const RULE_ID = /^[A-Z]+-\d{3}$/;
+/** 行の注釈の件数の目安。変更した行（空行を除く）に対する割合 */
+const NOTE_RATIO_LIMIT = 0.3;
 
 function parseArgs(argv) {
   const args = { base: "origin/main", head: "HEAD", cycle: "1" };
@@ -31,7 +35,8 @@ function parseArgs(argv) {
     if (value === undefined) usage(key + " に値がない");
     args[name] = value;
   }
-  if (!args.notes || !args.out) usage("--notes と --out は必須");
+  args.validateOnly = args.validateOnly === "true";
+  if (!args.notes || (!args.out && !args.validateOnly)) usage("--notes と --out は必須（--validate-only true のときは --out は不要）");
   args.cycle = Number(args.cycle);
   if (!Number.isInteger(args.cycle) || args.cycle < 1) usage("--cycle は1以上の整数");
   if (args.cycle >= 2 && !args.cycleBase) usage("--cycle が2以上のときは --cycle-base（サイクル開始時のコミット）が必須");
@@ -41,6 +46,7 @@ function parseArgs(argv) {
 function usage(message) {
   console.error("引数の誤り: " + message);
   console.error("使い方: node build-code-guide.mjs --notes <JSON> --out <HTML> [--cycle <c>] [--cycle-base <sha>] [--base origin/main] [--head HEAD] [--branch <名前>] [--pr <番号>]");
+  console.error("        node build-code-guide.mjs --notes <JSON> --validate-only true [--cycle <c>] [--cycle-base <sha>]");
   process.exit(2);
 }
 
@@ -76,13 +82,19 @@ function addedLines(from, to, path) {
   return set;
 }
 
-// criteria/known-terms.md の「- `語`」の行から、習得済みの語を取り出す。
+// criteria/known-terms.md の「- `語`」の行から、習得済みの語を取り出す。コードブロック（書式の例）の中は読まない。
 // 英数字と _ だけの語は単語として、それ以外（@onready や := など）は文字列として照合する
 function loadKnownTerms() {
   const here = dirname(fileURLToPath(import.meta.url));
   const text = readFileSync(join(here, "..", "criteria", "known-terms.md"), "utf8");
   const terms = [];
+  let inFence = false;
   for (const line of text.split("\n")) {
+    if (line.trim().startsWith("```")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
     const m = /^- `([^`]+)`\s*$/.exec(line.trim());
     if (m) terms.push(m[1]);
   }
@@ -178,6 +190,7 @@ function main() {
   }
   const usedTerms = new Set();
   const builtFiles = [];
+  let requiredLineCount = 0;
   noteFiles.forEach((f, fi) => {
     const where = "files[" + fi + "](" + (f.path || "?") + ")";
     if (!changedPaths.has(f.path)) return err(where, "このPRで追加・変更した .gd ではない（tests/ 配下は解説の対象外）");
@@ -191,6 +204,7 @@ function main() {
 
     // 解説が必要な行：新規ファイルは空行以外のすべて、既存ファイルはこのPRで追加・変更した空行以外の行
     const required = [...added].filter((n) => (source[n - 1] ?? "").trim() !== "");
+    requiredLineCount += required.length;
     const covered = new Set();
     let lastEnd = 0;
     const builtSections = [];
@@ -280,11 +294,20 @@ function main() {
     if (!readingOrder[i].role) err("overview.readingOrder[" + i + "]", "role がない");
   });
 
+  // 解説が多すぎると、PRのレビューで読み切れない。変更した行（空行を除く）の3割を目安にする（criteria/code-guide.md の3）
+  const noteTotal = builtFiles.reduce((a, f) => a + f.sections.reduce((b, s) => b + s.notes.length, 0), 0);
+  const noteLimit = Math.ceil(requiredLineCount * NOTE_RATIO_LIMIT);
+  if (noteTotal > noteLimit) warn("notes", "行の注釈が " + noteTotal + " 件ある。変更した " + requiredLineCount + " 行（空行を除く）の " + NOTE_RATIO_LIMIT * 100 + "% （" + noteLimit + " 件）までにまとめる");
+
   for (const w of warnings) console.log("警告 " + w);
   if (errors.length) {
     for (const e of errors) console.log("誤り " + e);
     console.log("検証の誤りが " + errors.length + " 件あるため、HTMLを書き出さなかった。");
     process.exit(1);
+  }
+  if (args.validateOnly) {
+    console.log("検証に通った（誤り 0 件、警告 " + warnings.length + " 件）。HTMLは書き出していない。");
+    process.exit(0);
   }
 
   // 読む順に並べ替え、用語集の使用箇所を集める

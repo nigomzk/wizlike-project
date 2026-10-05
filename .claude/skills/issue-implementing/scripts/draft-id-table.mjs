@@ -7,15 +7,24 @@
 // 人が書くもの：「規則（要約）」と「確認する内容（要約）」。下書きには、設計書の原文の抜粋を「※」付きで入れる。
 // 抜粋を、条件と例外を残した要約に書き直し、「※」を消す。
 //
+// draft は、id-table.md のほかに rules-excerpt.md（今回のIDの原文。定義行を省略せずに載せたもの）も書く。
+// レビュー担当が、設計書を各自で開き直さずにIDの原文を読めるようにするため。
+//
+// lint は、差分の追加行にある規則IDと受入IDの省略表記（範囲、接頭辞の省略）を検出する。LLMのレビューに頼らず、
+// レビューを依頼する前に機械で直すため。docs/、.claude/、Markdown、.import、.uid は対象外。
+//
 // 使い方:
 //   node draft-id-table.mjs draft --issue <issue.md> --latest <実装後のログ> --out <id-table.md>
-//                           [--red <先に書いたときのログ>] [--base origin/main] [--head HEAD] [--cwd <リポジトリ>]
+//                           [--red <先に書いたときのログ>] [--excerpt-out <rules-excerpt.md>]
+//                           [--base origin/main] [--head HEAD] [--cwd <リポジトリ>]
 //   node draft-id-table.mjs check --file <id-table.md> [--pr-body <PR本文>]
+//   node draft-id-table.mjs lint [--base origin/main] [--head HEAD] [--cwd <リポジトリ>]
 //
-// 終了コード: 0 = 成功 / 1 = check で誤りがある / 2 = 引数や git の誤り
+// 終了コード: 0 = 成功 / 1 = check か lint で誤りがある / 2 = 引数や git の誤り
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const EXCERPT_MARK = "※";
 
@@ -23,12 +32,13 @@ function usage(message) {
   console.error("誤り: " + message);
   console.error("使い方: node draft-id-table.mjs draft --issue <issue.md> --latest <log> --out <id-table.md> [--red <log>] [--base origin/main] [--head HEAD] [--cwd <dir>]");
   console.error("        node draft-id-table.mjs check --file <id-table.md> [--pr-body <file>]");
+  console.error("        node draft-id-table.mjs lint [--base origin/main] [--head HEAD] [--cwd <dir>]");
   process.exit(2);
 }
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
-  if (command !== "draft" && command !== "check") usage("最初の引数は draft か check");
+  if (command !== "draft" && command !== "check" && command !== "lint") usage("最初の引数は draft か check か lint");
   const args = { command, base: "origin/main", head: "HEAD", cwd: process.cwd() };
   for (let i = 0; i < rest.length; i += 2) {
     if (!rest[i].startsWith("--")) usage("不明な引数: " + rest[i]);
@@ -250,12 +260,77 @@ function draft(args) {
 
   writeFileSync(args.out, out.join("\n"), "utf8");
 
+  // レビュー担当向けの原文。設計書の定義行を、省略せずに載せる
+  const excerptPath = args.excerptOut || join(dirname(args.out), "rules-excerpt.md");
+  const excerptLines = [
+    `# 規則IDと受入IDの原文（${args.head}。${args.base} との差分）`,
+    "",
+    "draft-id-table.mjs が、設計書の定義行をそのまま抜き出したもの。レビュー担当は、ここに載っているIDのために設計書を開き直さない。",
+    "載っていない規則や、周辺の文脈が要る場合だけ、設計書を開く。",
+    "",
+    "## 規則ID",
+    "",
+    ...[...allIds].sort().map((id) => (rules[id] ? `- **${id}**（${rules[id].file}:${rules[id].line}）：${rules[id].cells.join(" / ")}` : `- **${id}**：（設計書に存在しない）`)),
+    "",
+    "## 受入ID（DoD と壊してはいけないもの。手動確認を含む）",
+    "",
+    ...[...automated, ...manual].map((id) => {
+      const def = acceptances[id];
+      return def ? `- **${id}**（${def.file}:${def.line}）：${def.cells.join(" / ")}` : `- **${id}**：（設計書に存在しない）`;
+    }),
+    "",
+  ];
+  writeFileSync(excerptPath, excerptLines.join("\n"), "utf8");
+
   const undefinedIds = [...allIds].filter((id) => !rules[id]);
   console.log(`規則ID ${allIds.size}件（仕様根拠 ${spec.length}、参照のみ ${refOnly.length}）、自動検証の受入ID ${automated.length}件、手動確認 ${manual.length}件`);
   if (undefinedIds.length) console.log("設計書に存在しないID: " + undefinedIds.join(", "));
   const missing = automated.filter((id) => !acceptances[id]);
   if (missing.length) console.log("受入IDの定義が見つからない: " + missing.join(", "));
   console.log("書き出した: " + args.out);
+  console.log("書き出した: " + excerptPath);
+}
+
+// ---------- lint ----------
+
+/** lint の対象外のファイル。設計書・スキル・Markdown は、IDの範囲表記を使ってよい（本文の書き方は別に決まっている） */
+const LINT_SKIP = /^(docs\/|\.claude\/)|\.(md|import|uid)$/;
+const LINT_RULES = [
+  { re: /[A-Z]{3}-\d{3}\s*〜/, label: "規則IDの範囲表記（1件ずつ書く）" },
+  { re: /[A-Z]{3}-\d{3}(?:\s*[,、]\s*\d{3}(?!\d))+/, label: "規則IDの接頭辞の省略（TST-003, TST-004 のように1件ずつ書く）" },
+  { re: /(?<![A-Za-z-])[A-Z]{1,2}\d{2}\s*〜\s*[A-Z]{0,2}\d{2}(?!\d)/, label: "受入IDの範囲表記（1件ずつ書く）" },
+];
+
+function lint(args) {
+  const git = makeGit(args.cwd);
+  const diff = git("diff", "--no-color", "--text", "-U0", `${args.base}...${args.head}`);
+  const problems = [];
+  let file = null;
+  let lineNo = 0;
+  for (const line of diff.split("\n")) {
+    if (line.startsWith("+++ ")) {
+      file = line.slice(4).replace(/^b\//, "");
+      continue;
+    }
+    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)/.exec(line);
+    if (hunk) {
+      lineNo = Number(hunk[1]);
+      continue;
+    }
+    if (!line.startsWith("+") || !file || file === "/dev/null") continue;
+    if (!LINT_SKIP.test(file)) {
+      for (const { re, label } of LINT_RULES) {
+        const m = re.exec(line);
+        if (m) problems.push(`${file}:${lineNo}: ${label}: ${m[0]}`);
+      }
+    }
+    lineNo++;
+  }
+  if (problems.length) {
+    console.error(`lint の誤り（${problems.length}件）:\n- ` + problems.join("\n- "));
+    process.exit(1);
+  }
+  console.log("lint に通った（IDの省略表記なし）");
 }
 
 // ---------- check ----------
@@ -295,4 +370,5 @@ function check(args) {
 
 const args = parseArgs(process.argv.slice(2));
 if (args.command === "draft") draft(args);
+else if (args.command === "lint") lint(args);
 else check(args);
