@@ -76,6 +76,23 @@ function addedLines(from, to, path) {
   return set;
 }
 
+// criteria/known-terms.md の「- `語`」の行から、習得済みの語を取り出す。
+// 英数字と _ だけの語は単語として、それ以外（@onready や := など）は文字列として照合する
+function loadKnownTerms() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const text = readFileSync(join(here, "..", "criteria", "known-terms.md"), "utf8");
+  const terms = [];
+  for (const line of text.split("\n")) {
+    const m = /^- `([^`]+)`\s*$/.exec(line.trim());
+    if (m) terms.push(m[1]);
+  }
+  return terms.map((term) => {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = /^[A-Za-z0-9_]+$/.test(term) ? "(?<![A-Za-z0-9_])" + escaped + "(?![A-Za-z0-9_])" : escaped;
+    return { term, re: new RegExp(pattern) };
+  });
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const errors = [];
@@ -96,8 +113,8 @@ function main() {
   const branch = args.branch || git("rev-parse", "--abbrev-ref", "HEAD").trim();
   if (args.cycleBase && !gitOk("rev-parse", "--verify", args.cycleBase + "^{commit}")) usage("--cycle-base のコミットが見つからない: " + args.cycleBase);
 
-  // このPRで追加・変更・改名した .gd（削除したものは解説しない）
-  const changed = git("diff", "--name-status", "-M", "--diff-filter=AMR", mergeBase, head, "--", "*.gd")
+  // このPRで追加・変更・改名した .gd（削除したものと tests/ 配下は解説しない）
+  const changed = git("diff", "--name-status", "-M", "--diff-filter=AMR", mergeBase, head, "--", "*.gd", ":(exclude)tests")
     .split("\n").filter(Boolean).map((row) => {
       const cols = row.split("\t");
       return { status: cols[0][0] === "A" ? "added" : "modified", path: cols[cols.length - 1] };
@@ -116,9 +133,17 @@ function main() {
   if (!notes.title) err("title", "Issueのタイトルがない");
   if (!Number.isInteger(notes.issue)) err("issue", "Issue番号が整数でない");
 
+  // 習得済みの語（criteria/known-terms.md）は、言語の注釈にも用語集にも書かない
+  const knownTerms = loadKnownTerms();
+  const checkKnown = (where, text) => {
+    const hit = knownTerms.find((k) => k.re.test(text || ""));
+    if (hit) err(where, "習得済みの語「" + hit.term + "」の解説は書かない（criteria/known-terms.md）。この解説を外す");
+  };
+
   // 用語集
   glossary.forEach((g, i) => {
     const where = "glossary[" + i + "](" + (g.id || "?") + ")";
+    if (g.category === "language") checkKnown(where, g.term);
     if (!/^[a-z0-9-]+$/.test(g.id || "")) err(where, "id は英小文字・数字・ハイフンにする");
     if (glossaryIds.has(g.id)) err(where, "id が重複している");
     glossaryIds.add(g.id);
@@ -155,7 +180,7 @@ function main() {
   const builtFiles = [];
   noteFiles.forEach((f, fi) => {
     const where = "files[" + fi + "](" + (f.path || "?") + ")";
-    if (!changedPaths.has(f.path)) return err(where, "このPRで追加・変更した .gd ではない");
+    if (!changedPaths.has(f.path)) return err(where, "このPRで追加・変更した .gd ではない（tests/ 配下は解説の対象外）");
     const info = changed.find((c) => c.path === f.path);
     const source = git("show", head + ":" + f.path).replace(/\r\n/g, "\n").replace(/\n$/, "").split("\n");
     const added = info.status === "added" ? new Set(source.map((_, i) => i + 1)) : addedLines(mergeBase, head, f.path);
@@ -187,6 +212,7 @@ function main() {
         if (!n.match) err(nw, "match（その行に現れる語句）がない");
         else if (!source[n.line - 1].includes(n.match)) err(nw, n.line + " 行に「" + n.match + "」が見つからない。実際の行: " + source[n.line - 1].trim());
         if (!CATEGORIES.includes(n.category)) err(nw, "category は " + CATEGORIES.join(" / ") + " のどれか");
+        if (n.category === "language") checkKnown(nw, n.match);
         if (!n.text) err(nw, "text がない");
         checkSource(n, nw);
         if (n.category === "design" && !(Array.isArray(n.ruleIds) && n.ruleIds.length)) err(nw, "設計の解説には ruleIds（根拠の規則ID）が必要");
