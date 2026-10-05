@@ -13,6 +13,7 @@ tools: Read, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query
 **設計書の規則ID・文書のパス・節番号を記憶や前提で扱わない。** 設計書は更新されるため、毎回 Issue本文と `docs/index.md` から辿る。
 
 1. プロンプトで渡された `packet.md` を読み、そこに書かれた材料（Issue本文、差分、Context7の調査ログ）を開く
+   - `packet.md` の「確認の範囲」が「前ラウンドの修正のみ」の場合は、前ラウンドの処置表と `diff-since-prev.patch`、変更されたファイルだけを読む。全体を読み直さない（判定に必要な設計書の原文は読む）
 2. `.claude/skills/issue-implementing/criteria/context7.md` を読み、確認が必須の対象と、結果の扱いを把握する
 3. `docs/index.md` から技術設計の文書を辿って読み、次を把握する
    - ディレクトリ構成とシーン構成
@@ -63,19 +64,19 @@ tools: Read, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query
 
 `.claude/skills/issue-implementing/templates/review-findings.md` に従い、次の順に出力する。重大度は `.claude/skills/issue-implementing/criteria/severity.md` に従う。指摘IDの接頭辞は `ARCH`。
 
-### 1. 変更ファイルの責務対応表
+### 1. 変更ファイルの責務対応表（不適合の行だけ返す）
 
 | ファイル | 担う責務 | 規則ID | 判定 | 備考 |
 | --- | --- | --- | --- | --- |
 | `<path>` | <責務の要約> | `<技術設計の規則ID>` | 適合 / 不適合 | 不適合の場合は指摘IDを書く |
 
-### 2. Godotの仕様確認表
+### 2. Godotの仕様確認表（誤用・未確認・記録なしの行だけ返す）
 
 | # | 確認した事項 | 対象箇所 | 出典URL | 結論 | 調査ログ |
 | --- | --- | --- | --- | --- | --- |
 | 1 | <概念を1つ> | `<file:line>` | `<Godot 4.5 ドキュメントのURL>` / 該当なし | 正しい / 誤用 / 未確認 | 記録あり / 記録なし |
 
-- 自分で問い合わせたものと、調査ログの記録を自分で確かめ直したものの両方を載せる
+- 自分で問い合わせたものと、調査ログの記録を自分で確かめ直したものを、すべて確認する。返答には、結論が「誤用」「未確認」の行と、調査ログが「記録なし」の行だけを載せる。すべて正しく記録ありなら、表の代わりに「Godotの仕様N件を確認、問題なし」と1行書く
 - Context7が使えなかった場合は、その旨を1行目に書き、該当する判断を「未確認」とする
 
 ### 3. 共通の指摘表
