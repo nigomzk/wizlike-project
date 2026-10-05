@@ -7,7 +7,7 @@
 //
 // 使い方:
 //   node build-code-guide.mjs --notes <解説のJSON> --out <HTMLのパス> [--cycle <c>] [--cycle-base <sha>]
-//                             [--base main] [--head HEAD] [--branch <名前>] [--pr <番号>]
+//                             [--base origin/main] [--head HEAD] [--branch <名前>] [--pr <番号>]
 //
 // 終了コード: 0 = 書き出した（警告は出力に出る） / 1 = 検証の誤りがある / 2 = 引数や git の誤り
 
@@ -22,7 +22,7 @@ const DOCS_PREFIX = "https://docs.godotengine.org/en/4.5/";
 const RULE_ID = /^[A-Z]+-\d{3}$/;
 
 function parseArgs(argv) {
-  const args = { base: "main", head: "HEAD", cycle: "1" };
+  const args = { base: "origin/main", head: "HEAD", cycle: "1" };
   for (let i = 0; i < argv.length; i++) {
     const key = argv[i];
     if (!key.startsWith("--")) usage("不明な引数: " + key);
@@ -40,7 +40,7 @@ function parseArgs(argv) {
 
 function usage(message) {
   console.error("引数の誤り: " + message);
-  console.error("使い方: node build-code-guide.mjs --notes <JSON> --out <HTML> [--cycle <c>] [--cycle-base <sha>] [--base main] [--head HEAD] [--branch <名前>] [--pr <番号>]");
+  console.error("使い方: node build-code-guide.mjs --notes <JSON> --out <HTML> [--cycle <c>] [--cycle-base <sha>] [--base origin/main] [--head HEAD] [--branch <名前>] [--pr <番号>]");
   process.exit(2);
 }
 

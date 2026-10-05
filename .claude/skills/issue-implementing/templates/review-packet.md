@@ -15,8 +15,9 @@
 | ラベル | <area:..., type:...> |
 | モード | 初回 / レビュー対応 |
 | ブランチ | <{type}/{N}-{slug}> |
-| 比較 | main...HEAD（<HEADの短いハッシュ>） |
-| 起動したレビュー担当 | spec-conformance-reviewer, test-reviewer, architecture-reviewer<, screen-reviewer> |
+| 比較 | origin/main...HEAD（<HEADの短いハッシュ>） |
+| 起動したレビュー担当 | spec-conformance-reviewer, test-reviewer, architecture-reviewer<, screen-reviewer>（2ラウンド目以降は、起動しなかった担当とその理由も書く） |
+| 確認の範囲 | 全体（1ラウンド目） / 前ラウンドの修正のみ（2ラウンド目以降） |
 
 ## 材料（絶対パス）
 
@@ -24,6 +25,7 @@
 | --- | --- |
 | Issue本文 | <.../issue.md> |
 | 差分 | <.../diff.patch> |
+| 前ラウンドからの差分（2ラウンド目以降） | <.../round-<r>/diff-since-prev.patch>（前ラウンドの <短いハッシュ>..HEAD）。「確認の範囲」が「前ラウンドの修正のみ」のときは、これと前ラウンドの処置表だけを読む |
 | テスト：先に書いたとき | <.../cycle-<c>/test-red.log> |
 | テスト：実装後 | <.../cycle-<c>/test-green.log> |
 | テスト：このラウンドの直前 | <.../round-<r>/test-latest.log> |
