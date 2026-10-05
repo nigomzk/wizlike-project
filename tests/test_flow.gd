@@ -56,7 +56,7 @@ func run(t) -> void:
 	await _fl09(t)
 
 
-# FL06: TITLEから設定を開いて変更し、閉じる（FLW-111〜113, FLW-301, PRS-000, PRS-400〜402, PRS-405, PRS-108）。
+# FL06: TITLEから設定を開いて変更し、閉じる（FLW-111, FLW-112, FLW-113, FLW-301, PRS-000, PRS-400, PRS-401, PRS-402, PRS-405, PRS-108）。
 # 確かめるのは TITLE 側だけである。MENUから開く部分は MENU の実装（#14）で確かめるため、FL06 は成功にせずスキップのまま残す（TST-411）。
 func _fl06(t) -> void:
 	var real_before := _file_state(REAL_SETTINGS_PATH)
@@ -187,7 +187,7 @@ func _fl06_game_flow(t) -> void:
 		loaded.free()
 
 
-## main.tscn の配線のまま、設定画面の表示・操作・戻るを確かめる（FLW-111〜113, FLW-014, PRS-400, PRS-401, PRS-104, PRS-108, ARC-204, ARC-205）。
+## main.tscn の配線のまま、設定画面の表示・操作・戻るを確かめる（FLW-111, FLW-112, FLW-113, FLW-014, PRS-400, PRS-401, PRS-104, PRS-108, ARC-204, ARC-205）。
 func _fl06_screen(t) -> void:
 	var script := load(GAME_FLOW_SCRIPT) as GDScript
 	var packed := load(MAIN_SCENE) as PackedScene
