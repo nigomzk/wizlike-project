@@ -84,8 +84,8 @@
 | `issue` / `title` | ○ | Issue番号（整数）とタイトル |
 | `overview.nodes[]` | ○ | 関係図の箱。`id` は英字で始まる英数字。`label` はノード名やクラス名。スクリプトを持つものは `file` にパスを書く。シーン（`main.tscn` など）を箱にしてよい |
 | `overview.edges[]` | ○ | 関係図の矢印。12本まで。同じ2つの箱の間の同じ向きの呼び出しは1本にまとめる（`criteria/code-guide.md` の5）。`kind` は `tree`（シーンの親子）/ `signal`（シグナルでの通知）/ `call`（メソッドの呼び出し）/ `instance`（シーンの生成）/ `other`。`label` はシグナル名やメソッド名 |
-| `overview.readingOrder[]` | ○ | 変更した `.gd` をすべて1回ずつ、依存される側から順に並べる。`role` は1文 |
-| `files[].path` | ○ | このPRで追加・変更した `.gd`。過不足があるとスクリプトが止まる |
+| `overview.readingOrder[]` | ○ | 変更した `.gd`（`tests/` を除く）をすべて1回ずつ、依存される側から順に並べる。`role` は1文 |
+| `files[].path` | ○ | このPRで追加・変更した `.gd`（`tests/` を除く）。過不足があるとスクリプトが止まる |
 | `files[].summary` | ○ | `criteria/code-guide.md` の3 |
 | `files[].scenes` | — | このスクリプトを付けたシーンや、注釈から参照するシーンのパス |
 | `sections[]` | ○ | 行の順に並べ、重ねない。新規ファイルは空行以外の全行を、既存ファイルは変更した行を、どれかの節に含める |

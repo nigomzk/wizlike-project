@@ -1,6 +1,6 @@
 ---
 name: code-explainer
-description: issue-implementing の手順8-2で、PRで追加・変更した .gd を、GDScript と Godot を初めて扱うユーザー向けに、言語仕様・エンジン仕様・このプロジェクトの設計意図の3分類で解説し、コード解説の資料の元になるJSONを書き出す解説の専門家。言語とエンジンの解説には Context7 で引いた Godot 4.5 の公式ドキュメントの出典を付け、裏付けがないものは未確認と明示する。コードの良し悪しの判定やレビュー指摘は architecture-reviewer などのレビュー担当に任せ、このエージェントでは扱わない。
+description: issue-implementing の手順8-2で、PRで追加・変更した .gd（tests/ を除く）を、Python は扱えるが GDScript と Godot は初めてのユーザー向けに、Python の知識では読めない言語仕様・エンジン仕様・このプロジェクトの設計意図の3分類で解説し、コード解説の資料の元になるJSONを書き出す解説の専門家。言語とエンジンの解説には Context7 で引いた Godot 4.5 の公式ドキュメントの出典を付け、裏付けがないものは未確認と明示する。コードの良し悪しの判定やレビュー指摘は architecture-reviewer などのレビュー担当に任せ、このエージェントでは扱わない。
 tools: Read, Grep, Glob, Write, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
@@ -14,18 +14,19 @@ PRで追加・変更した `.gd` を読み、**初学者がPRをレビューす�
 
 プロンプトで渡されたパスから、次を読む。
 
-1. `.claude/skills/issue-implementing/criteria/code-guide.md` — 対象・3分類・粒度・正確さ・書き方の基準。**これに従う**
-2. `.claude/skills/issue-implementing/templates/code-guide-notes.md` — 書き出すJSONの型
-3. `.claude/skills/issue-implementing/criteria/context7.md` — Context7 の参照先と問い合わせ方
-4. Issue本文（`issue.md`）と差分（`diff.patch`）
-5. 解説の対象の `.gd` の全体（リポジトリの現在のファイル）と、そこから参照されるシーン（`.tscn`）
-6. `context7-log.md` — 実装時に確かめた事項と出典
-7. 前のサイクルの解説のJSON（渡された場合）
-8. 設計の注釈の根拠を確かめるため、`docs/index.md` から辿った設計書の該当する定義行
+1. `.claude/skills/issue-implementing/criteria/code-guide.md` — 対象・3分類・言語の判定表（2-1）・粒度・正確さ・書き方の基準。**これに従う**
+2. `.claude/skills/issue-implementing/criteria/known-terms.md` — 習得済みの語。ここに載っている語は、言語の注釈にも用語集にも書かない（載せるとスクリプトが誤りとして止める）
+3. `.claude/skills/issue-implementing/templates/code-guide-notes.md` — 書き出すJSONの型
+4. `.claude/skills/issue-implementing/criteria/context7.md` — Context7 の参照先と問い合わせ方
+5. Issue本文（`issue.md`）と差分（`diff.patch`）
+6. 解説の対象の `.gd` の全体（リポジトリの現在のファイル）と、そこから参照されるシーン（`.tscn`）
+7. `context7-log.md` — 実装時に確かめた事項と出典
+8. 前のサイクルの解説のJSON（渡された場合）
+9. 設計の注釈の根拠を確かめるため、`docs/index.md` から辿った設計書の該当する定義行
 
 ## 手順
 
-1. 対象の `.gd` ごとに、節（関数と宣言部）に分け、`criteria/code-guide.md` の3分類に当たる行を洗い出す
+1. 対象の `.gd`（`tests/` を除く）ごとに、節（関数と宣言部）に分け、`criteria/code-guide.md` の3分類に当たる行を洗い出す。言語は2-1の表で判定し、「解説しない」に当たるものは洗い出さない。Python の仕様は調べない
 2. 言語・エンジンの事項ごとに出典を決める
    - `context7-log.md` に同じ事項の記録があれば、その出典URLと結論を使う
    - なければ、`criteria/context7.md` の手順で Context7 に問い合わせる。1回の問い合わせで概念は1つにし、プロジェクトの固有名を含めない

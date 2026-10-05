@@ -263,11 +263,11 @@ git push -u origin {type}/{N}-{slug}
 
 GDScript と Godot を初めて扱うユーザーが、PRをレビューするときの補足資料を作る。解説の中身は `code-explainer` が書き、メインエージェントは材料の用意と、スクリプトでの検証・書き出しを行う。**レビュー（手順5）の回数には数えず、資料のためのコミットもしない。**
 
-1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M main...HEAD -- '*.gd'`。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
+1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M main...HEAD -- '*.gd' ':(exclude)tests'`（`tests/` は解説しない）。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
 2. `CODE_GUIDE_DIR` と `node --version` を確かめる。どちらかが使えない場合は、資料を作らずに手順10で理由を報告する（作ったことにしない）
 3. `git diff main...HEAD` を `cycle-<c>/code-guide-diff.patch` に保存する
 4. `code-explainer` を呼び出す。プロンプトには次の絶対パスと値を書く
-   - `criteria/code-guide.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
+   - `criteria/code-guide.md`、`criteria/known-terms.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
    - Issue本文（最後のラウンドの `issue.md`）、`code-guide-diff.patch`、`context7-log.md`
    - 対象の `.gd` の一覧
    - 前のサイクルの `code-guide-notes.json`（あれば）
@@ -282,7 +282,7 @@ GDScript と Godot を初めて扱うユーザーが、PRをレビューする�
    - `--cycle-base` は2サイクル目以降に、`--pr` はPRが既にある場合（レビュー対応モード）に付ける
 7. 終了コードが1（検証の誤り）の場合は、ログの「誤り」の行を同じ `code-explainer` に SendMessage で渡して直させ、6をやり直す。**やり直しは2回まで**とし、それでも誤りが残れば資料を書き出さず、手順10で報告する
 
-スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
+スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、習得済みの語（`criteria/known-terms.md`）の解説が残っていないこと、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
 
 ### 9. PRを作成する
 
