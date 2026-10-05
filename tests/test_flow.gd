@@ -16,7 +16,34 @@ const TITLE_BACKGROUND := "res://assets/backgrounds/title.png"
 const MISSING_BACKGROUND := "res://assets/backgrounds/no_such_screen.png"
 # PRS-300 の色のトークン（bg_base、bg_scrim）
 const BG_BASE := Color("#0E1420")
-const BG_SCRIM := Color(0.054902, 0.0784314, 0.12549, 0.35)
+const BG_SCRIM := Color(BG_BASE, 0.35)
+
+
+## エンジンが出したエラーと警告の件数を数える（FL09。欠落した画像でエンジンの出力が出ないことの確認）。
+## `_log_error` は複数のスレッドから呼ばれうるため、`Mutex` で守る。
+class EngineLogCounter extends Logger:
+	var _mutex := Mutex.new()
+	var _count := 0
+
+	func _log_error(
+			_function: String,
+			_file: String,
+			_line: int,
+			_code: String,
+			_rationale: String,
+			_editor_notify: bool,
+			_error_type: int,
+			_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		_mutex.lock()
+		_count += 1
+		_mutex.unlock()
+
+	func count() -> int:
+		_mutex.lock()
+		var n := _count
+		_mutex.unlock()
+		return n
 
 
 func run(t) -> void:
@@ -272,7 +299,10 @@ func _fl09(t) -> void:
 	t.check("FL09", [true, true, true], [base.visible, image.visible, scrim.visible])
 
 	# 存在しないパスでは、画像も暗幕も出さず、bg_base の単色になる。実行時エラーを出さない（PRS-607, PRS-602）
+	# エンジンのエラーと警告も出さない。この区間の件数を数える（PRS-607）
 	t.check("FL09", false, ResourceLoader.exists(MISSING_BACKGROUND))
+	var logs := EngineLogCounter.new()
+	OS.add_logger(logs)
 	background.texture_path = MISSING_BACKGROUND
 	t.check("FL09", null, image.texture)
 	t.check("FL09", [true, false, false], [base.visible, image.visible, scrim.visible])
@@ -291,6 +321,8 @@ func _fl09(t) -> void:
 		missing.get_node("%Base").visible, missing.get_node("%Image").visible, missing.get_node("%Scrim").visible])
 	t.root.remove_child(missing)
 	missing.free()
+	OS.remove_logger(logs)
+	t.check("FL09", 0, logs.count())
 
 	t.root.remove_child(title)
 	title.free()
