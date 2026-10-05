@@ -55,13 +55,14 @@ description: /issue-drafting で起票したGitHub Issueを入力として、開
     code-guide-notes.json    # code-explainer が書いた解説（手順8-2）
     code-guide-build.log     # 資料の検証と書き出しの結果（手順8-2）
     round-<r>/
-      packet.md              # レビュー依頼の材料（templates/review-packet.md）
-      issue.md               # Issue本文
-      diff.patch             # git diff origin/main...HEAD
-      diff-since-prev.patch  # 2ラウンド目以降：前ラウンドの HEAD..HEAD の差分（手順5-1）
-      head-sha.txt           # このラウンドを依頼したときの HEAD（次のラウンドの差分の起点）
+      packet.md              # レビュー依頼の材料（templates/review-packet.md。make-packet.mjs が骨組みを作る）
+      issue.md               # Issue本文（make-packet.mjs が作る）
+      diff.patch             # git diff origin/main...HEAD（同上）
+      diff-since-prev.patch  # 2ラウンド目以降：前ラウンドの HEAD..HEAD の差分（同上）
+      head-sha.txt           # このラウンドを依頼したときの HEAD（次のラウンドの差分の起点。同上）
       test-latest.log        # このラウンド直前の実行結果
       id-table.md            # 規則IDと受入IDの一覧の下書き（PR本文に転記する。draft-id-table.mjs が作る）
+      rules-excerpt.md       # 今回のIDの原文（設計書の定義行。レビュー担当が読む。draft-id-table.mjs が id-table.md と同時に作る）
       findings-<agent>.md    # 各レビュー担当の返答（指摘表と判定だけ。手順5-2）
       triage.md              # 指摘の処置表
 ```
@@ -201,19 +202,28 @@ Co-Authored-By: <セッションの指示に従う>
 
 #### 5-1. 材料をそろえる
 
-`cycle-<c>/round-<r>/` に次を書き出す。
+`cycle-<c>/round-<r>/` の材料を、次の順で作る。手書きするのは、`test-latest.log` を作るためのテストの実行と、要約と、packet.md の「（要記入）」だけである。
 
-| ファイル | 内容 |
-| --- | --- |
-| `issue.md` | Issueの本文（タイトル・ラベル・コメントを含む） |
-| `diff.patch` | `git diff origin/main...HEAD`（手元の `main` は古いことがあるため、`origin/main` と比べる） |
-| `diff-since-prev.patch` | 2ラウンド目以降だけ。`git diff <前ラウンドの head-sha.txt の値>..HEAD` |
-| `head-sha.txt` | `git rev-parse HEAD` の値 |
-| `test-latest.log` | このラウンドの直前に、3-3の2・3と同じ条件で実行した結果 |
-| `id-table.md` | 規則IDと受入IDの一覧の下書き。作り方は下の「ID一覧の下書きを作る」 |
-| `packet.md` | `templates/review-packet.md` に従う。ほかのファイルのパス、変更ファイルの一覧、前のラウンドの処置表、レビュー対応モードではユーザーの指摘を載せる。2ラウンド目以降は「確認の範囲」を「前ラウンドの修正のみ」にする |
+1. **`test-latest.log`**：このラウンドの直前に、3-3の2・3と同じ条件で実行した結果を保存する
+2. **`id-table.md` と `rules-excerpt.md`**：下の「ID一覧の下書きを作る」で作る。`rules-excerpt.md` は、今回のIDの原文（設計書の定義行）で、レビュー担当が設計書を開き直さずに読む
+3. **lint**：差分の追加行にあるIDの省略表記（範囲、接頭辞の省略）を検出する。誤りが出たら直して commit し（手順4）、1と2をやり直す。レビューの前に機械で直すもので、レビューの回数には数えない
+   ```bash
+   node .claude/skills/issue-implementing/scripts/draft-id-table.mjs lint
+   ```
+4. **`issue.md`・`diff.patch`・`head-sha.txt`・`diff-since-prev.patch`・`packet.md`**：次の1コマンドで作る。`issue.md` はIssueの本文（タイトル・ラベル・コメントを含む）、`diff.patch` は `git diff origin/main...HEAD`、`head-sha.txt` は HEAD、`diff-since-prev.patch` は2ラウンド目以降の前ラウンドからの差分である。packet.md は対象・材料のフォルダと相対パス・変更ファイル・テストの終了コード・手動確認の受入ID・前ラウンドの処置表を、機械で埋めた骨組みで、`templates/review-packet.md` の形と同じ
+   ```bash
+   node .claude/skills/issue-implementing/scripts/make-packet.mjs make \
+     --root <scratchpad>/issue-<N> --issue <N> --cycle <c> --round <r> --branch <ブランチ名> \
+     --reviewers "<起動する担当。起動しなかった担当と理由も書く>" \
+     [--red-ids "<先に書いたときに指定した受入ID>"] --latest-ids "<このラウンドの直前に指定した受入ID>" \
+     [--user-findings <レビュー対応モードのユーザーの指摘を書いたファイル>]
+   ```
+5. **「（要記入）」を埋める**：packet.md の「変更ファイル」の対応するタスク（2ラウンド目以降は対応する指摘）、「手動確認の対象」の内容、「申し送り」を Edit で書く。書き終えたら、残りがないことを確かめる
+   ```bash
+   node .claude/skills/issue-implementing/scripts/make-packet.mjs check --file <round-<r>/packet.md>
+   ```
 
-`test-red.log`、`test-green.log`、`context7-log.md` は、packet.md からパスで参照する。
+`test-red.log`、`test-green.log`、`context7-log.md` は、packet.md が相対パスで参照する。
 
 #### ID一覧の下書きを作る
 
@@ -233,6 +243,7 @@ PR本文の「対応した規則ID」節と「受入IDごとの結果」表の�
    - 受入IDの表の、区分・検証する規則ID・先に書いたとき・実装後
    - 設計書に存在しないIDは、規則（要約）に「（設計書に存在しない）」と書く。引用の誤りなら直し、欠番（再利用しないIDを、決定記録などが挙げている場合）なら、そのとおりに書き直す
    - 自動検証でない受入ID（手動確認）の一覧（手順9の「Godotでの手動確認」に使う）
+   - 同じフォルダの `rules-excerpt.md`：上のIDの設計書の定義行（規則ID、受入ID。手動確認を含む）を省略せずに載せたもの。`--excerpt-out` で出力先を変えられる
 2. **要約に書き直す。** 下書きの「※」の行は、`docs/` の原文の抜粋である。条件と例外（「〜は対象外」「〜の場合を除く」）を残した、1文を目安にした要約に書き直し、「※」を消す。抜粋の言い回しをそのまま写さない。原文にない意味を足さない（差分の説明は規則の要約に混ぜない）
 3. **件数を見直す。** スクリプトが出した件数と、`<summary>` の件数を揃える（スクリプトが書いた件数のままでよい。行を足し引きしたら直す）
 
@@ -253,11 +264,13 @@ PR本文の「対応した規則ID」節と「受入IDごとの結果」表の�
 
 起動しなかった担当と理由は、packet.md の「起動したレビュー担当」に書く。
 
-**2ラウンド目（同じサイクルの2回目）に起動するのは、1ラウンド目で should 以上の指摘を出し、その処置で修正があった担当だけにする。** 承認または該当なしで、should 以上の指摘がなかった担当は起動しない。ただし、1ラウンド目の修正が、起動しない担当の観点に及ぶ場合（例：画面のシーンを直した場合の `screen-reviewer`、設計書の規則を直した場合の `spec-conformance-reviewer`）は、その担当も起動する。
+**IDの省略表記は、レビュー担当の観点にしない。** 手順5-1の lint が検出するため、レビュー担当は追加・変更したコメントのIDの書式を確かめない（IDが実在するか、引用が正しいかは確かめる）。
+
+**2ラウンド目（同じサイクルの2回目）に起動するのは、1ラウンド目で should 以上の指摘を出し、その処置で、lint で判定できない修正（コードの論理、テスト、設計書、画面、コメントの内容）があった担当だけにする。** lint で検出できる修正（IDの書式）だけを直した場合は、2回目のレビューを依頼せず、lint が通ったことを確かめて手順8へ進む。 承認または該当なしで、should 以上の指摘がなかった担当は起動しない。ただし、1ラウンド目の修正が、起動しない担当の観点に及ぶ場合（例：画面のシーンを直した場合の `screen-reviewer`、設計書の規則を直した場合の `spec-conformance-reviewer`）は、その担当も起動する。
 
 各エージェントへのプロンプトには、次を書く。
 
-1. `packet.md` の絶対パス（レビュー担当は、そこから材料を読む）
+1. `packet.md` の絶対パス（レビュー担当は、そこから材料を読む）。規則IDと受入IDの原文は、packet.md が指す `rules-excerpt.md` から読み、載っていない規則や周辺の文脈が要るときだけ設計書を開くよう伝える
 2. 出力の型 `.claude/skills/issue-implementing/templates/review-findings.md` と、判定基準 `.claude/skills/issue-implementing/criteria/severity.md` のパス
 3. 「自分の担当の観点に関わる変更がなければ、『該当なし』と判定欄に書くこと」
 4. 「返答は、指摘表と判定だけにする（画面レビューは、手動確認の手順案を加える）。全項目を確かめた結果の表は返答に書かず、問題のある行だけを載せる」。返答は会話に入り、その後の毎回の作業で読み直されるため、短くする
@@ -285,7 +298,7 @@ ID一覧の下書き（`id-table.md`）への指摘は、下書きを直す。�
 | 状況 | 次の手順 |
 | --- | --- |
 | 全員の判定が「承認」または「該当なし」で、修正もない | 手順8へ |
-| このサイクルのレビューが1回目で、手順6で修正した | 手順4に戻り、commitして2回目のレビューを依頼する（手順5-2の「2ラウンド目に起動する担当」だけに、前ラウンドの修正の差分を渡す） |
+| このサイクルのレビューが1回目で、手順6で修正した | 手順4に戻り、commitする。lint で判定できない修正（手順5-2）があれば、2回目のレビューを依頼する（「2ラウンド目に起動する担当」だけに、前ラウンドの修正の差分を渡す）。IDの書式だけの修正なら、lint が通ったことを確かめて手順8へ進む（PR本文には「lint で確認」と書く） |
 | このサイクルのレビューが2回目 | 手順6の修正をcommitし、手順8へ。**3回目のレビューは依頼しない。** レビューを経ていない修正と、残った must は、PR本文に明記する |
 
 ### 8. pushし、コード解説の資料を作る
@@ -307,17 +320,18 @@ GDScript と Godot を初めて扱うユーザーが、PRをレビューする�
    - `criteria/code-guide.md`、`criteria/known-terms.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
    - Issue本文（最後のラウンドの `issue.md`）、`code-guide-diff.patch`、`context7-log.md`
    - 対象の `.gd` の一覧
+   - 検証コマンド（`node .claude/skills/issue-implementing/scripts/build-code-guide.mjs --notes <出力先> --validate-only true [--cycle <c>] [--cycle-base <値>]`）。`code-explainer` が自分で実行し、誤りを直してから返す
    - 前のサイクルの `code-guide-notes.json`（あれば）
    - 出力先 `cycle-<c>/code-guide-notes.json`
 5. 返答の「Context7 に新たに問い合わせた事項」を、`templates/context7-log.md` の形で `context7-log.md` に追記する（使った箇所は「コード解説」）
-6. 検証して書き出す。出力を `cycle-<c>/code-guide-build.log` に保存する
+6. 書き出す。`code-explainer` が検証に通した JSON を、HTMLにする。出力を `cycle-<c>/code-guide-build.log` に保存する
    ```bash
    node .claude/skills/issue-implementing/scripts/build-code-guide.mjs \
      --notes <cycle-<c>/code-guide-notes.json> --out "$CODE_GUIDE_DIR/issue-<N>.html" \
      --cycle <c> [--cycle-base <cycle-<c>/base-sha.txt の値>] [--pr <PR番号>]
    ```
    - `--cycle-base` は2サイクル目以降に、`--pr` はPRが既にある場合（レビュー対応モード）に付ける
-7. 終了コードが1（検証の誤り）の場合は、ログの「誤り」の行を同じ `code-explainer` に SendMessage で渡して直させ、6をやり直す。**やり直しは2回まで**とし、それでも誤りが残れば資料を書き出さず、手順10で報告する
+7. 終了コードが1（検証の誤り）の場合は、ログの「誤り」の行を同じ `code-explainer` に SendMessage で渡して直させ、6をやり直す。**やり直しは2回まで**とし、それでも誤りが残れば資料を書き出さず、手順10で報告する。`code-explainer` が自分で検証しているため、通常はここで誤りは出ない
 
 スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、習得済みの語（`criteria/known-terms.md`）の解説が残っていないこと、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
 

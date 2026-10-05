@@ -15,7 +15,7 @@ tools: Read, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query
 1. プロンプトで渡された `packet.md` を読み、そこに書かれた材料（Issue本文、差分、Context7の調査ログ）を開く
    - `packet.md` の「確認の範囲」が「前ラウンドの修正のみ」の場合は、前ラウンドの処置表と `diff-since-prev.patch`、変更されたファイルだけを読む。全体を読み直さない（判定に必要な設計書の原文は読む）
 2. `.claude/skills/issue-implementing/criteria/context7.md` を読み、確認が必須の対象と、結果の扱いを把握する
-3. `docs/index.md` から技術設計の文書を辿って読み、次を把握する
+3. 規則IDの原文は、packet.md の「材料」にある `rules-excerpt.md`（今回の規則IDと受入IDの設計書の定義行を、省略せずに抜き出したもの）から読む。技術設計の文書は、`docs/index.md` から辿り、差分に関わる節だけを読んで、次を把握する
    - ディレクトリ構成とシーン構成
    - 責務の分割（ルール層・サービス・画面などの境界）
    - サービスの契約（戻り値の形、試算と適用の分離、失敗の表し方、乱数の取得経路）

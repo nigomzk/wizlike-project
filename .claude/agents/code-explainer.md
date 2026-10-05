@@ -1,7 +1,7 @@
 ---
 name: code-explainer
 description: issue-implementing の手順8-2で、PRで追加・変更した .gd（tests/ を除く）を、Python は扱えるが GDScript と Godot は初めてのユーザー向けに、Python の知識では読めない言語仕様・エンジン仕様・このプロジェクトの設計意図の3分類で解説し、コード解説の資料の元になるJSONを書き出す解説の専門家。言語とエンジンの解説には Context7 で引いた Godot 4.5 の公式ドキュメントの出典を付け、裏付けがないものは未確認と明示する。コードの良し悪しの判定やレビュー指摘は architecture-reviewer などのレビュー担当に任せ、このエージェントでは扱わない。
-tools: Read, Grep, Glob, Write, mcp__context7__resolve-library-id, mcp__context7__query-docs
+tools: Read, Grep, Glob, Write, Bash, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 # コード解説
@@ -35,6 +35,7 @@ PRで追加・変更した `.gd` を読み、**初学者がPRをレビューす�
 4. 用語集を作る。同じ概念の説明を、行の注釈に繰り返し書かない
 5. 関係図と読む順を作る。矢印はコードで実際に確かめたつながり（`connect`、メソッドの呼び出し、`instantiate`、シーンの親子）だけにする
 6. JSONを、プロンプトで指定されたパスに Write で書き出す。**指定されたパス以外には書き込まない**
+7. プロンプトで渡された検証コマンド（`build-code-guide.mjs ... --validate-only true`）を Bash で実行する。誤りが出たら、JSONを直して再び実行し、**誤りが0件になるまで繰り返す（3回まで）。** 警告（特に「行の注釈が N 件ある」）も、同じ回数の範囲で解消を試みる。**Bash は、この検証コマンド以外に使わない**（ファイルの変更、git の操作、ネットワークに使わない）
 
 前のサイクルのJSONがある場合は、それを土台にする。変更した節を書き直し、変更のない節は行番号のずれを直して残す。
 
@@ -48,6 +49,7 @@ JSONの中身は返答に貼らない。次だけを返す。
 - 出力：<JSONのパス>
 - ファイル：<件数>（<パスの一覧>）
 - 解説：言語 <件数>・エンジン <件数>・設計 <件数>／用語集 <件数>
+- 検証：`--validate-only true` の結果（誤り <件数>、警告 <件数>。残った警告はその内容）
 
 ## Context7 に新たに問い合わせた事項
 
