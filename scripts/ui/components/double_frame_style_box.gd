@@ -4,7 +4,7 @@ extends StyleBox
 ## 外側の線の内側（隙間を含む）を塗りで満たし、その上に外側と同心の角丸で内側の線を重ねる。
 ## 内容までの余白（content_margin）は、線と隙間の幅に padding を足して自動で決める。
 
-## 外側の線と塗りを描く箱。線と隙間の幅や色を変えるたびに _refresh() で作り直す
+## 外側の線と塗りを描く箱。線と隙間の幅や色を変えるたびに _refresh() で設定し直す
 var _outer := StyleBoxFlat.new()
 ## 内側の線だけを描く箱
 var _inner := StyleBoxFlat.new()
