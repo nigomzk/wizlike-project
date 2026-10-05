@@ -100,6 +100,17 @@ func _a06(t) -> void:
 	t.check("A06", true, theme != null)
 	if theme == null:
 		return
+	# 共通Theme は SceneTree ができる前に読み込まれるため、スクリプトを持つリソースを入れない（ARC-208）
+	t.check("A06", [], _scripted_theme_items(theme))
+	# 判定そのものが見逃さないことを、スクリプトを持つ StyleBox を1つ入れた Theme で確かめる
+	var scripted := GDScript.new()
+	scripted.source_code = "extends StyleBoxEmpty\n"
+	t.check("A06", OK, scripted.reload())
+	var scripted_box := StyleBoxEmpty.new()
+	scripted_box.set_script(scripted)
+	var bad_theme := Theme.new()
+	bad_theme.set_stylebox(&"panel", &"PanelContainer", scripted_box)
+	t.check("A06", ["PanelContainer/styles/panel"], _scripted_theme_items(bad_theme))
 
 	var scene_paths := _files_with_suffix(SCENES_DIR, ".tscn")
 	for path in KNOWN_SCENES:
@@ -135,6 +146,26 @@ func _a06(t) -> void:
 	t.check("A06", OK, bad_scene.pack(bad_root))
 	bad_root.free()
 	t.check("A06", 3, _theme_violations(bad_scene, theme).size())
+
+
+## Theme の中で、スクリプトを持つリソース（StyleBox、フォント、アイコン、既定のフォント）を「型/種類/名前」の一覧で返す（ARC-208）。
+func _scripted_theme_items(theme: Theme) -> Array:
+	var result: Array = []
+	if theme.default_font != null and theme.default_font.get_script() != null:
+		result.append("default_font")
+	for type_name in theme.get_stylebox_type_list():
+		for item in theme.get_stylebox_list(type_name):
+			if theme.get_stylebox(item, type_name).get_script() != null:
+				result.append("%s/styles/%s" % [type_name, item])
+	for type_name in theme.get_font_type_list():
+		for item in theme.get_font_list(type_name):
+			if theme.get_font(item, type_name).get_script() != null:
+				result.append("%s/fonts/%s" % [type_name, item])
+	for type_name in theme.get_icon_type_list():
+		for item in theme.get_icon_list(type_name):
+			if theme.get_icon(item, type_name).get_script() != null:
+				result.append("%s/icons/%s" % [type_name, item])
+	return result
 
 
 ## シーンの中で、ARC-208 に反するプロパティを「ノードのパス: プロパティ名」の一覧で返す。
