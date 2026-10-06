@@ -7,7 +7,12 @@ mouse_filter = 2
 focus_mode = 0
 script = ExtResource("1_header")
 
-[node name="Value" type="Label" parent="."]
+[node name="Inner" type="PanelContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Value" type="Label" parent="Inner"]
 unique_name_in_owner = true
 layout_mode = 2
 horizontal_alignment = 2

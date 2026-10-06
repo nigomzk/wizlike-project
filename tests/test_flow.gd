@@ -800,6 +800,27 @@ func _fl08_game_flow(t) -> void:
 	flow.state_changed.connect(func(new_state, old_state): history.append([old_state, new_state]))
 	t.root.add_child(flow)
 
+	# 作成に失敗した場合は、何も変えず TITLE に留まる（ARC-403, FLW-002）。データベースがない場合と、初期の所持品を収められない場合
+	flow.database = null
+	t.check("FL08", false, flow.new_game())
+	t.check("FL08", s.TITLE, flow.state)
+	t.check("FL08", false, flow.has_session())
+	var overflowing = load(DATABASE_SCRIPT).new()
+	t.check("FL08", true, overflowing.load_and_validate(DATA_DIR, func(_line: String) -> void: pass))
+	var heap: Array[ItemStackDef] = []
+	for i in 31:
+		var stack := ItemStackDef.new()
+		stack.item_id = overflowing.items()[0].id
+		stack.quantity = overflowing.items()[0].max_stack
+		heap.append(stack)
+	overflowing.new_game_items = heap
+	flow.database = overflowing
+	t.check("FL08", false, flow.new_game())
+	t.check("FL08", s.TITLE, flow.state)
+	t.check("FL08", false, flow.has_session())
+	flow.database = db
+	overflowing.free()
+
 	# TITLE：セッションがなく、街の操作はできない
 	t.check("FL08", s.TITLE, flow.state)
 	t.check("FL08", false, flow.has_session())
@@ -1049,6 +1070,10 @@ func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: 
 	t.check("FL08", expected_disabled.map(func(d): return Control.FOCUS_NONE if d else Control.FOCUS_ALL), buttons.map(func(b): return b.focus_mode))
 	t.check("FL08", buttons[8], buttons[0].find_next_valid_focus())
 	t.check("FL08", buttons[0], buttons[8].find_next_valid_focus())
+	t.check("FL08", buttons[8], buttons[0].find_prev_valid_focus())
+	# 矢印キーも、二列に分かれたギルドとタイトルへの間を移る
+	t.check("FL08", [buttons[8], buttons[8]], [buttons[0].find_valid_focus_neighbor(SIDE_RIGHT), buttons[0].find_valid_focus_neighbor(SIDE_BOTTOM)])
+	t.check("FL08", [buttons[0], buttons[0]], [buttons[8].find_valid_focus_neighbor(SIDE_LEFT), buttons[8].find_valid_focus_neighbor(SIDE_TOP)])
 
 	# 選べない項目は、押しても遷移しない。GameFlow が `LOCKED` を返し、画面は判断しない（FLW-204）
 	_press(screen, "教会（不可）")
