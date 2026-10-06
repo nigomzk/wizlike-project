@@ -368,8 +368,6 @@ func _d03_cases() -> Array:
 			[_op_set("jobs.csv", {"id": "warrior"}, {"initial_skill_id": "fire"})]))
 	cases.append(_case("職業: 装備できる職業がない", "equipment.csv", "sword_1",
 			[_op_set("equipment.csv", {"id": "sword_1"}, {"allowed_jobs": ""})]))
-	cases.append(_case("職業: 武器の種別が職業の武器種と合わない", "equipment.csv", "sword_1",
-			[_op_set("equipment.csv", {"id": "sword_1"}, {"category": "axe"})]))
 	# 対象と使用場面（DAT-905）
 	cases.append(_case("組み合わせ: 敵対象のスキルが街で使える", "skills.csv", "fire",
 			[_op_set("skills.csv", {"id": "fire"}, {"contexts": "battle|town"})]))

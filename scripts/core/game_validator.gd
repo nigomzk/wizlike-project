@@ -82,19 +82,19 @@ var _problems: Array[Dictionary] = []
 
 
 ## 読み込み済みの `db` と、CSVの表 `tables`（ファイル名 → {列名: 値} の配列）を検査し、問題を返す。
-## 問題がなければ空。読込に失敗した表があっても、空の表として扱い、検査を続ける。
-static func validate(db, tables: Dictionary) -> Array[Dictionary]:
-	var validator := GameValidator.new()
-	validator._db = db
-	validator._tables = tables
-	validator._check_ranges()
-	validator._check_job_correspondence()
-	validator._check_target_contexts()
-	validator._check_enemy_actions()
-	validator._check_quests()
-	validator._check_cell_events()
-	validator._check_texts()
-	return validator._problems
+## 問題がなければ空。呼び出し側が `new()` して使う（`class_name` のキャッシュに頼らず、`preload` で読めるようにするため）。読込に失敗した表があっても、空の表として扱い、検査を続ける。
+func validate(db, tables: Dictionary) -> Array[Dictionary]:
+	_db = db
+	_tables = tables
+	_problems = []
+	_check_ranges()
+	_check_job_correspondence()
+	_check_target_contexts()
+	_check_enemy_actions()
+	_check_quests()
+	_check_cell_events()
+	_check_texts()
+	return _problems
 
 
 func _add(file: String, id: Variant, rule: String, message: String) -> void:
@@ -173,6 +173,8 @@ func _check_effect_chances(file: String, owner_id: Variant, effects: Array[Actio
 
 # --- 職業との対応（DAT-904） ---------------------------------------------------
 
+## 職業との対応は、初期装備・初期スキルが自分の職業のもの（INV-301, DAT-200）と、装備に装備できる職業があること。
+## 武器の `category` と職業の `weapon_category` の一致は、設計書に定めがないため検査しない
 func _check_job_correspondence() -> void:
 	const RULE := "DAT-904"
 	for job_def: JobDef in _db.jobs():
@@ -182,8 +184,6 @@ func _check_job_correspondence() -> void:
 				_add("jobs.csv", job_def.id, RULE, "starting_weapon_id が武器ではありません: %s" % weapon.id)
 			elif not weapon.allowed_jobs.has(job_def.id):
 				_add("jobs.csv", job_def.id, RULE, "starting_weapon_id を装備できません: %s" % weapon.id)
-			elif weapon.category != job_def.weapon_category:
-				_add("jobs.csv", job_def.id, RULE, "starting_weapon_id の種別が weapon_category と違います: %s" % weapon.id)
 		var armor: EquipmentDef = _db.equipment(job_def.starting_armor_id)
 		if armor != null:
 			if armor.slot != &"armor":
@@ -196,13 +196,6 @@ func _check_job_correspondence() -> void:
 	for equipment_def: EquipmentDef in _db.equipment_list():
 		if equipment_def.allowed_jobs.is_empty():
 			_add("equipment.csv", equipment_def.id, RULE, "allowed_jobs が空です")
-		if equipment_def.slot != &"weapon":
-			continue
-		for job_id in equipment_def.allowed_jobs:
-			var job_def: JobDef = _db.job(job_id)
-			if job_def != null and job_def.weapon_category != equipment_def.category:
-				_add("equipment.csv", equipment_def.id, RULE,
-						"category が職業 %s の weapon_category と違います" % job_id)
 
 
 # --- 対象と使用場面（DAT-905） -------------------------------------------------

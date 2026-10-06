@@ -22,6 +22,9 @@ const FLOOR_SCENE_DIR := "res://scenes/floors"
 ## DAT-230
 const QUEST_TEXT_PREFIX := "quest_"
 
+## 検査は game_validator.gd。新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、`preload` で読む
+const Validator := preload("res://scripts/core/game_validator.gd")
+
 const LIST_DELIMITER := "|"
 
 ## 各CSVの列。定義を作るのに必要な列が欠けていれば、読込を失敗させる
@@ -134,7 +137,7 @@ func load_and_validate(data_dir := DEFAULT_DATA_DIR, log_sink := Callable()) -> 
 	_build_definitions(tables)
 	_derive_fields()
 	_check_references(tables)
-	for problem in GameValidator.validate(self, tables):
+	for problem in Validator.new().validate(self, tables):
 		_fail(problem["file"], problem["id"], problem["message"])
 
 	_loaded = errors.is_empty()
