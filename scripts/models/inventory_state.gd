@@ -1,7 +1,7 @@
 class_name ItemStackState
 extends RefCounted
 ## DAT-515: 所持品の1枠。装備は quantity=1、消耗品と素材は1〜max_stack。
-## 所持品の一覧は `Array[ItemStackState]`（DAT-500）。
+## 所持品の一覧は `GameSession.inventory`（`Array[ItemStackState]`）に置く。
 
 var item_id: StringName = &""
 var quantity := 0
