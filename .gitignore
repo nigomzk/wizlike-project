@@ -16,3 +16,6 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# issue-implementing の Godot 確認済みキャッシュ（個人の作業用。共有しない）
+.claude/skills/issue-implementing/knowledge/
