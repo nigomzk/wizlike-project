@@ -558,7 +558,7 @@ func _build_items(rows: Array[Dictionary], effects: Dictionary) -> void:
 		def.id = StringName(id)
 		def.name = row["name"]
 		def.kind = StringName(row["kind"])
-		def.max_stack = _int(FILE, row, "max_stack", id)
+		def.max_stack = _int(FILE, row, "max_stack", id, ItemDef.DEFAULT_MAX_STACK)
 		def.buy_price = _int(FILE, row, "buy_price", id, ItemDef.NOT_FOR_SALE)
 		def.sell_price = _int(FILE, row, "sell_price", id)
 		def.shop_tier = StringName(row["shop_tier"])

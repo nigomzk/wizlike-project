@@ -3,13 +3,15 @@ extends Resource
 ## DAT-203: アイテム。素材は `target` と `contexts` を空とする（DAT-905）。`icon` は DAT-228。
 
 const KINDS: Array[StringName] = [&"consumable", &"material"]
+## DAT-203: `max_stack` の既定値
+const DEFAULT_MAX_STACK := 9
 ## 非売品を表す `buy_price`
 const NOT_FOR_SALE := -1
 
 @export var id: StringName = &""
 @export var name := ""
 @export var kind: StringName = &""
-@export var max_stack := 9
+@export var max_stack := DEFAULT_MAX_STACK
 @export var buy_price := NOT_FOR_SALE
 @export var sell_price := 0
 @export var shop_tier: StringName = &""

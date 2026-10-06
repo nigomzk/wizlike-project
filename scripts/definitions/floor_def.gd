@@ -10,6 +10,11 @@ extends Resource
 @export var expected_level_min := 0
 @export var expected_level_max := 0
 @export var authoring_scene_path := ""
+## DAT-210 の `authoring_scene`。参照するたびに読み込む（ファイルがなければ null）。
+## 読込時には存在を検証しないため、`@export` にしない
+var authoring_scene: PackedScene:
+	get:
+		return load_authoring_scene()
 @export var encounters: Array[EncounterDef] = []
 @export var events: Array[CellEventDef] = []
 @export var default_spawn := Vector2i.ZERO

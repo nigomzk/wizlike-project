@@ -267,6 +267,7 @@ func _check_resolution(t, db) -> void:
 	# authoring_scene は解決規約だけを持ち、存在を検証しない
 	for f in db.floors():
 		t.check("D01", "res://scenes/floors/%s.tscn" % f.id, f.authoring_scene_path)
+		t.check("D01", ResourceLoader.exists(f.authoring_scene_path), f.authoring_scene != null)
 
 	# 文章：波括弧を置換する。渡さない名前はそのまま残す
 	var texts := {}
