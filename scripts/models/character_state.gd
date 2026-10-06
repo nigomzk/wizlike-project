@@ -6,7 +6,8 @@ extends RefCounted
 ## 装備枠（INV-300）。`equipment` のキー
 const EQUIPMENT_SLOTS: Array[StringName] = [&"weapon", &"armor", &"accessory"]
 
-## 登録時に割り当てる単調増加の整数（GLS-403, PTY-006）の10進表記。`GameSession.party_ids` が文字列のため文字列で持つ
+## 登録時に割り当てる単調増加の整数（GLS-403, PTY-006）の10進表記。`GameSession.party_ids` が文字列のため、
+## 仮に文字列で持つ。型は、冒険者を作る処理（ギルドの登録）を実装するときに確定する
 var id := ""
 var name := ""
 var job_id: StringName = &""

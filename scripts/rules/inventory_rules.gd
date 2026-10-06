@@ -112,12 +112,16 @@ static func defense_power(db, character) -> int:
 
 ## 成功した試算を適用する。失敗した試算は何も変更しない（ARC-403）。適用したら true。
 ## `inventory` は内容を置き換える。`character` は装備の試算（`plan_equip`）のときに渡す。
+## 装備の試算に `character` がなければ、所持品だけが変わって食い違うため、何も変更せず false を返す。
 static func apply(plan: Dictionary, inventory: Array, character = null) -> bool:
 	if not plan.ok:
 		return false
 	var changes: Dictionary = plan.changes
+	var is_equip := changes.has("equipment")
+	if is_equip and character == null:
+		return false
 	inventory.assign(changes.inventory)
-	if changes.has("equipment") and character != null:
+	if is_equip:
 		character.equipment = changes.equipment.duplicate()
 		character.current_hp = changes.current_hp
 		character.current_sp = changes.current_sp
@@ -132,9 +136,6 @@ static func _effective_stats(db, base: StatBlock, equipment: Dictionary) -> Stat
 			continue
 		for field in _STAT_FIELDS:
 			result.set(field, result.get(field) + def.stat_bonus.get(field))
-	# GLS-108: 最大HPの最低値は1、最大SPの最低値は0
-	result.hp = maxi(1, result.hp)
-	result.sp = maxi(0, result.sp)
 	return result
 
 

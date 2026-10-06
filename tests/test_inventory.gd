@@ -127,6 +127,10 @@ func _i02(t) -> void:
 	t.check("I02", &"sword_1", c.equipment[&"weapon"])
 	t.check("I02", CAPACITY, inv.size())
 	t.check("I02", true, _pairs(inv).has([&"sword_2", 1]))
+	# 装備の試算は、冒険者なしでは適用しない。所持品だけが変わって食い違うことを防ぐ（INV-200, ARC-403）
+	var before_swap := _pairs(inv)
+	t.check("I02", false, _rules.apply(swap, inv))
+	t.check("I02", before_swap, _pairs(inv))
 	t.check("I02", true, _rules.apply(swap, inv, c))
 	t.check("I02", &"sword_2", c.equipment[&"weapon"])
 	t.check("I02", CAPACITY, _rules.slot_count(_db, inv))
