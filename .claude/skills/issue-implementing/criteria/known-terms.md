@@ -23,3 +23,5 @@
 - `:=`
 - `Array`
 - `as`
+- `is`
+- `preload`
