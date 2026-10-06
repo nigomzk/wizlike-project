@@ -8,6 +8,8 @@ const DB_SCRIPT := "res://scripts/core/game_database.gd"
 const DATA_DIR := "res://data"
 const MANIFEST := "res://data/manifest.csv"
 const CONTENT_VERSION_KEY := "content_version"
+## D03 が不正を入れる複写の置き場所（TST-108）
+const TMP_DIR := "user://test_tmp"
 ## manifest.csv に件数が載るCSV。0件で合格してしまわないよう、全件の存在を確かめる（DAT-901）
 const COUNTED_FILES := [
 	"jobs.csv", "skills.csv", "skill_effects.csv", "equipment.csv", "items.csv", "item_effects.csv",
@@ -19,6 +21,7 @@ const COUNTED_FILES := [
 
 func run(t) -> void:
 	_d01(t)
+	_d03(t)
 
 
 # D01: データベースをロードする（DAT-901, DAT-902）
@@ -279,6 +282,312 @@ func _check_resolution(t, db) -> void:
 			db.text(&"guild_train_confirm", {"name": "A", "skill": "B", "gold": 5}))
 	t.check("D01", true, db.has_text(&"intro"))
 	t.check("D01", false, db.has_text(&"no_such_text"))
+
+
+# D03: 不正なデータはロードを失敗させ、問題のファイル名とIDをログへ出す
+# （DAT-902, DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-908, DAT-909, DAT-225）
+func _d03(t) -> void:
+	var bad: Array = []
+	# 対照：無傷の複写は成功する。以降の失敗が、注入した不正によるものだと言えるようにする（TST-108）
+	_copy_data()
+	var control := _load_copy()
+	t.check("D03", true, control["ok"])
+	t.check("D03", [], control["log"])
+
+	for c in _d03_cases():
+		_copy_data()
+		var applied := true
+		for op in c["ops"]:
+			if _apply(op) == 0:
+				applied = false
+		if not applied:
+			bad.append("%s: 注入する行が見つからない" % c["label"])
+			continue
+		var result := _load_copy()
+		if result["ok"]:
+			bad.append("%s: ロードが成功した" % c["label"])
+		var expected := "%s id=%s:" % [c["file"], c["id"] if c["id"] != "" else "-"]
+		var found := false
+		for line in result["log"]:
+			if line.contains(expected):
+				found = true
+		if not found:
+			bad.append("%s: ログに「%s」がない（%s）" % [c["label"], expected, result["log"]])
+		# ログへ出した行は、データベースが記録した問題と一致する
+		t.check("D03", result["log"], result["errors"])
+	t.check("D03", [], bad)
+	_remove_data_copy()
+
+
+## 注入する不正の一覧。`file` と `id` は、ログに出るべき問題のファイル名とID（IDなしは空）
+func _d03_cases() -> Array:
+	var cases: Array = []
+	# 参照切れ（DAT-902）
+	cases.append(_case("参照切れ: ドロップ品", "enemies.csv", "slime",
+			[_op_set("enemies.csv", {"id": "slime"}, {"drop_item_id": "no_such_item"})]))
+	cases.append(_case("参照切れ: 敵行動", "enemy_action_weights.csv", "wolf",
+			[_op_set("enemy_action_weights.csv", {"enemy_id": "wolf", "action_id": "bite"}, {"action_id": "no_such_action"})]))
+	# 件数（DAT-901）
+	cases.append(_case("件数: manifest と一致しない", "jobs.csv", "",
+			[_op_set("manifest.csv", {"key": "jobs.csv"}, {"value": "6"})]))
+	# 負の料金（DAT-903）
+	cases.append(_case("負の料金: 装備の購入価格", "equipment.csv", "sword_1",
+			[_op_set("equipment.csv", {"id": "sword_1"}, {"buy_price": "-5"})]))
+	cases.append(_case("負の料金: アイテムの売却価格", "items.csv", "herb",
+			[_op_set("items.csv", {"id": "herb"}, {"sell_price": "-1"})]))
+	cases.append(_case("負の料金: 非売品（-1）以外の購入価格", "items.csv", "herb",
+			[_op_set("items.csv", {"id": "herb"}, {"buy_price": "-2"})]))
+	cases.append(_case("負の料金: 習得料金", "skills.csv", "sweep",
+			[_op_set("skills.csv", {"id": "sweep"}, {"learn_cost": "-1"})]))
+	cases.append(_case("負の料金: クエスト報酬のお金", "quests.csv", "q_slime",
+			[_op_set("quests.csv", {"id": "q_slime"}, {"reward_gold": "-1"})]))
+	cases.append(_case("負の料金: 宝箱のお金", "chest_rewards.csv", "ruins_f1_chest_b",
+			[_op_set("chest_rewards.csv", {"event_id": "ruins_f1_chest_b"}, {"gold": "-1"})]))
+	cases.append(_case("負の料金: 敵のお金", "enemies.csv", "slime",
+			[_op_set("enemies.csv", {"id": "slime"}, {"gold": "-1"})]))
+	cases.append(_case("負の料金: 初期の所持金", "new_game.csv", "",
+			[_op_set("new_game.csv", {"kind": "gold"}, {"amount": "-1"})]))
+	# HPが0以下（DAT-903）
+	cases.append(_case("HP: 敵が0", "enemies.csv", "slime",
+			[_op_set("enemies.csv", {"id": "slime"}, {"hp": "0"})]))
+	cases.append(_case("HP: 職業の基礎値が0", "jobs.csv", "warrior",
+			[_op_set("jobs.csv", {"id": "warrior"}, {"base_hp": "0"})]))
+	# 範囲外の確率（DAT-903）
+	cases.append(_case("確率: ドロップ率が1を超える", "enemies.csv", "slime",
+			[_op_set("enemies.csv", {"id": "slime"}, {"drop_chance": "1.5"})]))
+	cases.append(_case("確率: 追加増加の確率が負", "jobs.csv", "warrior",
+			[_op_set("jobs.csv", {"id": "warrior"}, {"chance_hp": "-0.1"})]))
+	cases.append(_case("確率: スキル効果の状態異常の確率が1を超える", "skill_effects.csv", "sleep_dust",
+			[_op_set("skill_effects.csv", {"skill_id": "sleep_dust"}, {"status_chance": "2"})]))
+	# 職業との対応（DAT-904）
+	cases.append(_case("職業: 初期武器を装備できない", "jobs.csv", "warrior",
+			[_op_set("jobs.csv", {"id": "warrior"}, {"starting_weapon_id": "staff_1"})]))
+	cases.append(_case("職業: 初期防具が防具でない", "jobs.csv", "warrior",
+			[_op_set("jobs.csv", {"id": "warrior"}, {"starting_armor_id": "sword_1"})]))
+	cases.append(_case("職業: 初期スキルが別の職業のもの", "jobs.csv", "warrior",
+			[_op_set("jobs.csv", {"id": "warrior"}, {"initial_skill_id": "fire"})]))
+	cases.append(_case("職業: 装備できる職業がない", "equipment.csv", "sword_1",
+			[_op_set("equipment.csv", {"id": "sword_1"}, {"allowed_jobs": ""})]))
+	cases.append(_case("職業: 武器の種別が職業の武器種と合わない", "equipment.csv", "sword_1",
+			[_op_set("equipment.csv", {"id": "sword_1"}, {"category": "axe"})]))
+	# 対象と使用場面（DAT-905）
+	cases.append(_case("組み合わせ: 敵対象のスキルが街で使える", "skills.csv", "fire",
+			[_op_set("skills.csv", {"id": "fire"}, {"contexts": "battle|town"})]))
+	cases.append(_case("組み合わせ: PARTY が戦闘で使える", "skills.csv", "silent_steps",
+			[_op_set("skills.csv", {"id": "silent_steps"}, {"contexts": "battle|exploration"})]))
+	cases.append(_case("組み合わせ: 使用場面が空", "skills.csv", "heal",
+			[_op_set("skills.csv", {"id": "heal"}, {"contexts": ""})]))
+	cases.append(_case("組み合わせ: 対象が列挙にない", "skills.csv", "heal",
+			[_op_set("skills.csv", {"id": "heal"}, {"target": "NOBODY"})]))
+	cases.append(_case("組み合わせ: 使用場面が列挙にない", "skills.csv", "heal",
+			[_op_set("skills.csv", {"id": "heal"}, {"contexts": "battle|space"})]))
+	cases.append(_case("組み合わせ: アイテムの PARTY が戦闘で使える", "items.csv", "return_thread",
+			[_op_set("items.csv", {"id": "return_thread"}, {"contexts": "battle|exploration"})]))
+	cases.append(_case("組み合わせ: 素材に対象がある", "items.csv", "slime_gel",
+			[_op_set("items.csv", {"id": "slime_gel"}, {"target": "LIVING_ALLY"})]))
+	cases.append(_case("組み合わせ: 素材に使用場面がある", "items.csv", "slime_gel",
+			[_op_set("items.csv", {"id": "slime_gel"}, {"contexts": "town"})]))
+	cases.append(_case("組み合わせ: アイテムの種類が列挙にない", "items.csv", "herb",
+			[_op_set("items.csv", {"id": "herb"}, {"kind": "gadget"})]))
+	cases.append(_case("組み合わせ: 敵行動の対象が PARTY", "enemy_actions.csv", "attack",
+			[_op_set("enemy_actions.csv", {"id": "attack"}, {"target": "PARTY"})]))
+	# 敵の行動（DAT-906）
+	cases.append(_case("敵行動: 重み合計が100でない", "enemy_action_weights.csv", "wolf",
+			[_op_set("enemy_action_weights.csv", {"enemy_id": "wolf", "action_id": "attack"}, {"weight": "60"})]))
+	cases.append(_case("敵行動: 重みが0の行がある（合計は100）", "enemy_action_weights.csv", "wolf",
+			[_op_set("enemy_action_weights.csv", {"enemy_id": "wolf", "action_id": "attack"}, {"weight": "100"}),
+			_op_set("enemy_action_weights.csv", {"enemy_id": "wolf", "action_id": "bite"}, {"weight": "0"})]))
+	cases.append(_case("敵行動: 重み付きなのに行動表がない", "enemy_action_weights.csv", "slime",
+			[_op_remove("enemy_action_weights.csv", {"enemy_id": "slime"})]))
+	cases.append(_case("敵行動: 行動の方式が列挙にない", "enemies.csv", "slime",
+			[_op_set("enemies.csv", {"id": "slime"}, {"action_mode": "random"})]))
+	cases.append(_case("敵行動: 固定巡回の連番が欠ける", "enemy_action_cycles.csv", "gatekeeper",
+			[_op_remove("enemy_action_cycles.csv", {"enemy_id": "gatekeeper", "turn_index": "2"})]))
+	cases.append(_case("敵行動: 固定巡回の連番が重複する", "enemy_action_cycles.csv", "gatekeeper",
+			[_op_set("enemy_action_cycles.csv", {"enemy_id": "gatekeeper", "turn_index": "3"}, {"turn_index": "2"})]))
+	cases.append(_case("敵行動: 固定巡回が1から始まらない", "enemy_action_cycles.csv", "gatekeeper",
+			[_op_set("enemy_action_cycles.csv", {"enemy_id": "gatekeeper", "turn_index": "1"}, {"turn_index": "0"})]))
+	# クエスト（DAT-907）
+	cases.append(_case("クエスト: 必要数が0", "quests.csv", "q_slime",
+			[_op_set("quests.csv", {"id": "q_slime"}, {"target_count": "0"})]))
+	cases.append(_case("クエスト: 報酬のアイテムの数が0", "quests.csv", "q_slime",
+			[_op_set("quests.csv", {"id": "q_slime"}, {"reward_item_quantity": "0"})]))
+	cases.append(_case("クエスト: 報酬の経験値が負", "quests.csv", "q_slime",
+			[_op_set("quests.csv", {"id": "q_slime"}, {"reward_exp": "-1"})]))
+	cases.append(_case("クエスト: 納品先のIDがない", "quests.csv", "q_wings",
+			[_op_set("quests.csv", {"id": "q_wings"}, {"target_id": "no_such_item"})]))
+	# セルイベントの必須欄（DAT-225）
+	cases.append(_case("イベント: 階段に移動先のセルがない", "floor_events.csv", "ruins_f1_exit",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_exit"}, {"link_cell_x": "", "link_cell_y": ""})]))
+	cases.append(_case("イベント: 階段の向きが範囲外", "floor_events.csv", "ruins_f1_exit",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_exit"}, {"link_facing": "9"})]))
+	cases.append(_case("イベント: 近道に開通許可側がない", "floor_events.csv", "ruins_f1_shortcut",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_shortcut"}, {"unlock_from_x": "", "unlock_from_y": ""})]))
+	cases.append(_case("イベント: 近道の開通許可側が単位ベクトルでない", "floor_events.csv", "ruins_f1_shortcut",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_shortcut"}, {"unlock_from_x": "1", "unlock_from_y": "1"})]))
+	cases.append(_case("イベント: 宝箱の行がない", "floor_events.csv", "ruins_f1_chest_a",
+			[_op_remove("chest_rewards.csv", {"event_id": "ruins_f1_chest_a"})]))
+	cases.append(_case("イベント: 宝箱の行が2つある", "chest_rewards.csv", "ruins_f1_chest_a",
+			[_op_append("chest_rewards.csv", {"event_id": "ruins_f1_chest_a", "gold": "0", "item_id": "herb", "quantity": "1"})]))
+	cases.append(_case("イベント: 宝箱でないイベントに報酬がある", "chest_rewards.csv", "ruins_f1_door",
+			[_op_append("chest_rewards.csv", {"event_id": "ruins_f1_door", "gold": "5", "item_id": "", "quantity": "0"})]))
+	cases.append(_case("イベント: 会話碑に文章IDがない", "floor_events.csv", "ruins_f1_inscription",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_inscription"}, {"text_id": ""})]))
+	cases.append(_case("イベント: ボスの敵がボスでない", "floor_events.csv", "ruins_f3_boss",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f3_boss"}, {"enemy_id": "slime"})]))
+	cases.append(_case("イベント: ボスに敵がない", "floor_events.csv", "ruins_f3_boss",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f3_boss"}, {"enemy_id": ""})]))
+	cases.append(_case("イベント: 魔法陣に向きがない", "floor_events.csv", "warp_depths",
+			[_op_set("floor_events.csv", {"event_id": "warp_depths"}, {"link_facing": ""})]))
+	cases.append(_case("イベント: 魔法陣にIDがない", "floor_events.csv", "warp_depths",
+			[_op_set("floor_events.csv", {"event_id": "warp_depths"}, {"warp_id": ""})]))
+	cases.append(_case("イベント: 扉に表にない欄がある", "floor_events.csv", "ruins_f1_door",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_door"}, {"enemy_id": "slime"})]))
+	cases.append(_case("イベント: 種類が列挙にない", "floor_events.csv", "ruins_f1_door",
+			[_op_set("floor_events.csv", {"event_id": "ruins_f1_door"}, {"kind": "trapdoor"})]))
+	# 文章（DAT-909）。行を消す注入は、manifest.csv の件数も合わせる
+	cases.append(_case("文章: IDが重複する", "texts.csv", "intro",
+			[_op_append("texts.csv", {"id": "intro", "text": "重複"})]))
+	cases.append(_case("文章: 本文が空", "texts.csv", "save_done",
+			[_op_set("texts.csv", {"id": "save_done"}, {"text": ""})]))
+	cases.append(_case("文章: 波括弧の名前が定めた名前でない", "texts.csv", "rescue_confirm",
+			[_op_set("texts.csv", {"id": "rescue_confirm"}, {"text": "所持金{money}Gを渡します。"})]))
+	cases.append(_case("文章: 波括弧が閉じていない", "texts.csv", "rescue_confirm",
+			[_op_set("texts.csv", {"id": "rescue_confirm"}, {"text": "所持金{gold"})]))
+	cases.append(_case("文章: 必須の文章がない（導入）", "texts.csv", "intro",
+			[_op_remove("texts.csv", {"id": "intro"})]))
+	cases.append(_case("文章: 必須の文章がない（確認文）", "texts.csv", "guild_train_confirm",
+			[_op_remove("texts.csv", {"id": "guild_train_confirm"})]))
+	cases.append(_case("文章: 必須の文章がない（保存）", "texts.csv", "save_failed",
+			[_op_remove("texts.csv", {"id": "save_failed"})]))
+	cases.append(_case("文章: 必須の文章がない（起動エラー）", "texts.csv", "boot_error",
+			[_op_remove("texts.csv", {"id": "boot_error"})]))
+	cases.append(_case("文章: 必須の文章がない（会話碑）", "texts.csv", "insc_ruins_f1",
+			[_op_remove("texts.csv", {"id": "insc_ruins_f1"})]))
+	cases.append(_case("文章: 必須の文章がない（ボス前）", "texts.csv", "boss_gatekeeper_pre",
+			[_op_remove("texts.csv", {"id": "boss_gatekeeper_pre"})]))
+	cases.append(_case("文章: 必須の文章がない（ボス初回撃破）", "texts.csv", "boss_gatekeeper_first",
+			[_op_remove("texts.csv", {"id": "boss_gatekeeper_first"})]))
+	cases.append(_case("文章: 必須の文章がない（エラーコード）", "texts.csv", "error_no_gold",
+			[_op_remove("texts.csv", {"id": "error_no_gold"})]))
+	cases.append(_case("文章: 必須の文章がない（エラーコード。複数語）", "texts.csv", "error_no_living_member",
+			[_op_remove("texts.csv", {"id": "error_no_living_member"})]))
+	return cases
+
+
+func _case(label: String, file: String, id: String, ops: Array) -> Dictionary:
+	return {"label": label, "file": file, "id": id, "ops": ops}
+
+
+## 一致する行（`match_row` の全列が一致）の列を書き換える
+func _op_set(file: String, match_row: Dictionary, values: Dictionary) -> Dictionary:
+	return {"op": "set", "file": file, "match": match_row, "values": values}
+
+
+## 一致する行を消す。`manifest.csv` の件数も合わせる
+func _op_remove(file: String, match_row: Dictionary) -> Dictionary:
+	return {"op": "remove", "file": file, "match": match_row}
+
+
+## 行を末尾へ足す。`manifest.csv` の件数も合わせる
+func _op_append(file: String, row: Dictionary) -> Dictionary:
+	return {"op": "append", "file": file, "row": row}
+
+
+## 注入を1つ適用する。書き換えた（消した・足した）行数を返す
+func _apply(op: Dictionary) -> int:
+	var path := "%s/%s" % [TMP_DIR, op["file"]]
+	var table := _read_csv_table(path)
+	var header: PackedStringArray = table["header"]
+	var rows: Array = table["rows"]
+	var changed := 0
+	match op["op"]:
+		"set":
+			for row in rows:
+				if _row_matches(header, row, op["match"]):
+					for column in op["values"]:
+						row[header.find(column)] = op["values"][column]
+					changed += 1
+		"remove":
+			var kept: Array = []
+			for row in rows:
+				if _row_matches(header, row, op["match"]):
+					changed += 1
+				else:
+					kept.append(row)
+			rows = kept
+		"append":
+			var added := PackedStringArray()
+			for column in header:
+				added.append(op["row"].get(column, ""))
+			rows.append(added)
+			changed = 1
+	_write_csv_table(path, header, rows)
+	if op["op"] != "set" and changed > 0:
+		_adjust_manifest_count(op["file"], changed if op["op"] == "append" else -changed)
+	return changed
+
+
+func _adjust_manifest_count(file: String, delta: int) -> void:
+	var path := "%s/manifest.csv" % TMP_DIR
+	var table := _read_csv_table(path)
+	var header: PackedStringArray = table["header"]
+	for row in table["rows"]:
+		if row[header.find("key")] == file:
+			row[header.find("value")] = str(int(row[header.find("value")]) + delta)
+	_write_csv_table(path, header, table["rows"])
+
+
+func _row_matches(header: PackedStringArray, row: PackedStringArray, match_row: Dictionary) -> bool:
+	for column in match_row:
+		if row[header.find(column)] != match_row[column]:
+			return false
+	return true
+
+
+## CSVを {header, rows} として読む。行は PackedStringArray
+func _read_csv_table(path: String) -> Dictionary:
+	var rows: Array = []
+	var f := FileAccess.open(path, FileAccess.READ)
+	var header := f.get_csv_line()
+	while not f.eof_reached():
+		var cells := f.get_csv_line()
+		if cells.size() == 1 and cells[0] == "":
+			continue
+		rows.append(cells)
+	return {"header": header, "rows": rows}
+
+
+func _write_csv_table(path: String, header: PackedStringArray, rows: Array) -> void:
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_csv_line(header)
+	for row in rows:
+		f.store_csv_line(row)
+
+
+## `res://data` の全CSVを、`user://` 配下の置き場所へ複写する（開発者の `data/` を変えない）
+func _copy_data() -> void:
+	DirAccess.make_dir_recursive_absolute(TMP_DIR)
+	for file in DirAccess.get_files_at(DATA_DIR):
+		if file.ends_with(".csv"):
+			var out := FileAccess.open("%s/%s" % [TMP_DIR, file], FileAccess.WRITE)
+			out.store_buffer(FileAccess.get_file_as_bytes("%s/%s" % [DATA_DIR, file]))
+
+
+func _remove_data_copy() -> void:
+	for file in DirAccess.get_files_at(TMP_DIR):
+		DirAccess.remove_absolute("%s/%s" % [TMP_DIR, file])
+	DirAccess.remove_absolute(TMP_DIR)
+
+
+## 複写からロードし、成功か・ログへ出た行・データベースが記録した問題を返す
+func _load_copy() -> Dictionary:
+	var db = load(DB_SCRIPT).new()
+	var log_lines: Array = []
+	var ok: bool = db.load_and_validate(TMP_DIR, func(line: String) -> void: log_lines.append(line))
+	var errors: Array = Array(db.errors)
+	db.free()
+	return {"ok": ok, "log": log_lines, "errors": errors}
 
 
 ## data/*.csv を翻訳として取り込まない（Keep File）
