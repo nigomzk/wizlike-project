@@ -21,7 +21,7 @@ func run(t) -> void:
 	_d01(t)
 
 
-# D01: データベースをロードする（DAT-901, 902）
+# D01: データベースをロードする（DAT-901, DAT-902）
 func _d01(t) -> void:
 	var manifest := _read_manifest()
 	var db = load(DB_SCRIPT).new()

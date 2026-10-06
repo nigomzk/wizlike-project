@@ -6,7 +6,7 @@ extends Node
 ## 定義は固定の値として扱い、戦闘中のHPなどの可変の値は書き込まない（DAT-002）。
 ##
 ## 検査するのは、各CSVの件数（DAT-901）と参照先IDの存在（DAT-902）、および定義を作るために必要な
-## 列と数値の書式まで。料金・確率・組み合わせなどの検査（DAT-903〜909）は game_validator.gd で行う。
+## 列と数値の書式まで。料金・確率・組み合わせなどの検査（DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-908, DAT-909）は game_validator.gd で行う。
 
 const DEFAULT_DATA_DIR := "res://data"
 const MANIFEST_FILE := "manifest.csv"
@@ -116,7 +116,7 @@ var _texts: Dictionary = {}
 var _texture_cache: Dictionary = {}
 
 
-## 全CSVを読み込み、件数と参照を検査する（DAT-901, 902）。成功すれば true。
+## 全CSVを読み込み、件数と参照を検査する（DAT-901, DAT-902）。成功すれば true。
 ## `data_dir` は読込元（TST-108）。`log_sink` は問題1件ごとに `Callable(line: String)` で呼ばれる。
 ## 指定がなければ `push_error` へ出力する（DAT-908）。
 func load_and_validate(data_dir := DEFAULT_DATA_DIR, log_sink := Callable()) -> bool:
