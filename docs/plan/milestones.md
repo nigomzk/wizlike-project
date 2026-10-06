@@ -56,3 +56,15 @@ A → B → C → D → E → F → G → H
 | type | `feat` / `test` / `chore` / `spec-change` |
 
 `spec-change` は仕様そのものの変更を伴うIssueに付ける。このラベルが付いたIssueは、実装の前に `docs/` の該当IDを更新し、`decisions/log.md` に理由を記録する。
+
+---
+
+## 4. 起票時の持ち越し事項
+
+先のIssueの実装で、後の段階の都合により見送った事項。**後の段階のIssueを起票するときに、タスクと仕様根拠へ取り込む。** 取り込んで起票したら、その行を削除する。個々のIssueの一覧ではなく、まだIssueになっていない事項だけを置く。
+
+| 送り先 | 事項 | 元 | 規則ID |
+| --- | --- | --- | --- |
+| 段階D（セーブ） | 保存の成功時に、`GameSession.dirty` を解除する。解除は保存の書込みと置換の両方が成功したときだけとし、失敗時は立てたままにする。`GameSession` には解除の手段がまだない（立てる側の `notify_changed()` だけがある） | #8 | SAV-306, SAV-305 |
+| 段階E（探索） | `GameSession.floors` を `Dictionary[String, FloorState]`、`GameSession.exploration` を `ExplorationState` に型付けする。#8 では型が未実装のため、`Dictionary` と `RefCounted` で持っている | #8 | DAT-500, DAT-511, DAT-513 |
+| 段階G（施設）。クエストの状態を最初に作るIssue | `GameSession.quests` を `Dictionary[String, QuestState]` に型付けする。#8 では型が未実装のため、`Dictionary` で持っている | #8 | DAT-500, DAT-512 |
