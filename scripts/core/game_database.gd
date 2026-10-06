@@ -117,7 +117,7 @@ var _texts: Dictionary = {}
 var _texture_cache: Dictionary = {}
 
 
-## 全CSVを読み込み、件数・参照・値・組み合わせ・文章を検査する（DAT-901, DAT-902, DAT-903〜909）。成功すれば true。
+## 全CSVを読み込み、件数・参照・値・組み合わせ・文章を検査する（DAT-901, DAT-902, DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-908, DAT-909）。成功すれば true。
 ## `data_dir` は読込元（TST-108）。`log_sink` は問題1件ごとに `Callable(line: String)` で呼ばれる。
 ## 指定がなければ `push_error` へ出力する（DAT-908）。
 func load_and_validate(data_dir := DEFAULT_DATA_DIR, log_sink := Callable()) -> bool:
