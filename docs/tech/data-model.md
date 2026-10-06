@@ -114,7 +114,7 @@ day: int = 1
 gold: int
 next_character_id: int = 1
 characters: Array[CharacterState]
-party_ids: Array[String]（順序が意味を持つ）
+party_ids: Array[int]（冒険者のID。順序が意味を持つ）
 inventory: Array[ItemStackState]（装備はquantity=1、消耗品は1〜9）
 important_items: Dictionary[String, int]
 floors: Dictionary[String, FloorState]
@@ -133,7 +133,7 @@ dirty: bool（保存対象外。立てる条件はFLW-304）
 
 | ID | 型 | フィールド |
 | --- | --- | --- |
-| DAT-510 | CharacterState | id, name, job_id, portrait_id, level, total_exp, base_stats, current_hp, current_sp, poison:bool, equipment:{weapon, armor, accessory}（空欄は空文字）, learned_skill_ids, growth_rng |
+| DAT-510 | CharacterState | id:int（GLS-403）, name, job_id, portrait_id, level, total_exp, base_stats, current_hp, current_sp, poison:bool, equipment:{weapon, armor, accessory}（空欄は空文字）, learned_skill_ids, growth_rng |
 | DAT-511 | FloorState | visited_cells:Array[Vector2i], known_wall_cells:Array[Vector2i], discovered_event_ids, opened_chest_ids, opened_door_ids（近道を含む）, visited:bool |
 | DAT-512 | QuestState | id, status, kill_count。納品数は在庫から算出し、固定のカウンターを保存しない（QST-205） |
 | DAT-513 | ExplorationState | floor_id, cell, facing, encounter_remaining, silent_steps_remaining, arrival_event_suppressed |
