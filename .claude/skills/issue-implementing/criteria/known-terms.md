@@ -18,3 +18,8 @@
 ---
 
 - `@onready`
+- `class_name`
+- `extends`
+- `:=`
+- `Array`
+- `as`
