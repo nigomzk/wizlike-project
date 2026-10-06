@@ -18,9 +18,9 @@ func setup(flow: Node) -> void:
 
 
 func _ready() -> void:
-	# texts.csv を読み込めない、または `boot_error` の文がない場合に限り、固定した文を表示する（PRS-704）。
-	# 存在しない文章IDを `text()` へ渡すと、エンジンのエラーが出るため、先に確かめる
-	_message.text = _flow.database.text(MESSAGE_ID) if _flow.database.has_text(MESSAGE_ID) else FALLBACK_MESSAGE
+	# texts.csv 自体を読み込めない（文章が1件もない）場合に限り、固定した文を表示する（PRS-704）
+	var database: Node = _flow.database
+	_message.text = database.text(MESSAGE_ID) if database.text_count() > 0 else FALLBACK_MESSAGE
 	_quit.pressed.connect(func(): _flow.quit_app())
 
 

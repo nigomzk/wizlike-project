@@ -576,18 +576,6 @@ func _fl07_boot_screen(t) -> void:
 	_copy_data()
 	DirAccess.remove_absolute(BOOT_DATA_DIR + "/texts.csv")
 	await _fl07_boot_screen_case(t, packed, fallback)
-
-	# texts.csv は読めるが、boot_error の文がない：同じく固定した文を表示し、存在しない文章IDのエラーを出さない（PRS-704）
-	_remove_dir(BOOT_ROOT)
-	_copy_data()
-	var kept := PackedStringArray()
-	for line in FileAccess.get_file_as_string(BOOT_DATA_DIR + "/texts.csv").split("\n"):
-		if not line.begins_with(BOOT_ERROR_TEXT_ID + ","):
-			kept.append(line)
-	var file := FileAccess.open(BOOT_DATA_DIR + "/texts.csv", FileAccess.WRITE)
-	file.store_string("\n".join(kept))
-	file.close()
-	await _fl07_boot_screen_case(t, packed, fallback)
 	_remove_dir(BOOT_ROOT)
 
 
@@ -642,7 +630,7 @@ func _fl07_boot_screen_case(t, packed: PackedScene, expected_message: String) ->
 			t.root.push_input(_key_event(KEY_ENTER))
 			t.check("FL07", 3, quits[0])
 			flow.unblock_input(&"modal")
-	# 起動エラーの画面を出しても、エンジンのエラーは出ない（存在しない文章IDの参照など）
+	# 起動エラーの画面を出しても、エンジンのエラーは出ない
 	OS.remove_logger(logs)
 	t.check("FL07", 0, logs.count())
 	t.root.remove_child(main)

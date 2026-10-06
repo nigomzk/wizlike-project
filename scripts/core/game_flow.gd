@@ -74,7 +74,7 @@ func _ready() -> void:
 	boot()
 
 
-## BOOT から TITLE か BOOT_ERROR へ進む（FLW-015, FLW-016, DAT-900）。
+## BOOT から TITLE か BOOT_ERROR へ進む（FLW-015, FLW-016, DAT-900, ARC-300）。
 ## 起動時に、ウィンドウの最小サイズを設定し（PRS-000）、設定を読み込んで反映し（PRS-405）、データを検証する。
 ## 検証に失敗した場合は、TITLE を経由せず BOOT_ERROR へ進む。
 func boot() -> void:
