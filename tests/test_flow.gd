@@ -782,7 +782,7 @@ func _fl08(t) -> void:
 	t.skip("FL08", "ギルドでの登録（#10）を含む部分は判定していない。登録を含まない部分（セッションの作成と破棄、街の制限、画面）だけを確かめた")
 
 
-## GameFlow だけで、セッションの作成と破棄、街の項目の可否と遷移を確かめる（FLW-002, FLW-108, FLW-110, FLW-204, TWN-110〜112, ARC-203）。
+## GameFlow だけで、セッションの作成と破棄、街の項目の可否と遷移を確かめる（FLW-002, FLW-108, FLW-110, FLW-204, TWN-110, TWN-111, TWN-112, ARC-203）。
 func _fl08_game_flow(t) -> void:
 	var script := load(GAME_FLOW_SCRIPT) as GDScript
 	t.check("FL08", true, script != null)
