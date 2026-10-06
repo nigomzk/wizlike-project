@@ -17,6 +17,7 @@ const ACTION_MODES: Array[StringName] = [&"weighted", &"cycle"]
 @export var element_multipliers: Dictionary = {}
 ## 状態異常 → 耐性倍率。記載のないものは 1.0
 @export var status_multipliers: Dictionary = {}
+@warning_ignore("shadowed_global_identifier")
 @export var exp := 0
 @export var gold := 0
 @export var drop_item_id: StringName = &""

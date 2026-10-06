@@ -675,18 +675,18 @@ func _build_floors(tables: Dictionary) -> void:
 	encounter_rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return String(a["encounter_index"]).to_int() < String(b["encounter_index"]).to_int())
 	for row in encounter_rows:
-		var floor_def: FloorDef = _floor_by_id.get(StringName(row["floor_id"]))
-		if floor_def == null:
+		var floor_data: FloorDef = _floor_by_id.get(StringName(row["floor_id"]))
+		if floor_data == null:
 			continue
 		var encounter := EncounterDef.new()
 		encounter.enemy_ids = _names(row["enemy_ids"])
 		encounter.weight = _int(ENCOUNTERS, row, "weight", row["floor_id"])
-		floor_def.encounters.append(encounter)
+		floor_data.encounters.append(encounter)
 
 	const EVENTS := "floor_events.csv"
 	for row in tables[EVENTS]:
 		var id: String = row["event_id"]
-		var floor_def: FloorDef = _floor_by_id.get(StringName(row["floor_id"]))
+		var floor_data: FloorDef = _floor_by_id.get(StringName(row["floor_id"]))
 		var event := CellEventDef.new()
 		event.id = StringName(id)
 		event.cell = Vector2i(_int(EVENTS, row, "cell_x", id), _int(EVENTS, row, "cell_y", id))
@@ -702,8 +702,8 @@ func _build_floors(tables: Dictionary) -> void:
 			_fail(EVENTS, id, "セルイベントのIDが重複しています（GLS-401）")
 			continue
 		_event_by_id[event.id] = event
-		if floor_def != null:
-			floor_def.events.append(event)
+		if floor_data != null:
+			floor_data.events.append(event)
 
 	# 宝箱の中身。経験値は設定しない
 	const CHESTS := "chest_rewards.csv"
@@ -794,7 +794,7 @@ func _effects_by_owner(file: String, owner_column: String, tables: Dictionary) -
 	rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return String(a["order"]).to_int() < String(b["order"]).to_int())
 	for row in rows:
-		var owner := StringName(row[owner_column])
+		var owner_id := StringName(row[owner_column])
 		var id: String = row[owner_column]
 		var effect := ActionEffect.new()
 		_int(file, row, "order", id)
@@ -810,9 +810,9 @@ func _effects_by_owner(file: String, owner_column: String, tables: Dictionary) -
 		effect.restore_flat = _int(file, row, "restore_flat", id)
 		effect.duration_steps = _int(file, row, "duration_steps", id)
 		effect.requires_previous_hit = _bool(file, row, "requires_previous_hit", id)
-		if not grouped.has(owner):
-			grouped[owner] = []
-		grouped[owner].append(effect)
+		if not grouped.has(owner_id):
+			grouped[owner_id] = []
+		grouped[owner_id].append(effect)
 	return grouped
 
 
@@ -855,11 +855,11 @@ func _check_references(tables: Dictionary) -> void:
 			_require(_enemy_action_by_id, weighted.action_id, "enemy_action_weights.csv", enemy_def.id, "action_id")
 		for action_id in enemy_def.action_cycle:
 			_require(_enemy_action_by_id, action_id, "enemy_action_cycles.csv", enemy_def.id, "action_id")
-	for floor_def in _floors:
-		for encounter in floor_def.encounters:
+	for floor_data in _floors:
+		for encounter in floor_data.encounters:
 			for enemy_id in encounter.enemy_ids:
-				_require(_enemy_by_id, enemy_id, "encounters.csv", floor_def.id, "enemy_ids")
-		for event in floor_def.events:
+				_require(_enemy_by_id, enemy_id, "encounters.csv", floor_data.id, "enemy_ids")
+		for event in floor_data.events:
 			_check_event_references(event)
 	for quest_def in _quests:
 		_check_condition(quest_def.unlock, "quests.csv", quest_def.id)
