@@ -4,6 +4,12 @@ extends RefCounted
 const IDS := ["A01", "A02", "A03", "A04", "A05", "A06", "A07"]
 
 const MAIN_SCENE := "res://scenes/main.tscn"
+## 新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、実行時に `load` で読む
+const RNG_SERVICE_SCRIPT := "res://scripts/services/rng_service.gd"
+## GLS-200: 乱数の系列
+const RNG_SERIES: Array[StringName] = [&"encounter", &"battle", &"loot", &"creation"]
+## A02 が系列ごとに注入する seed。系列で異なる値にする
+const RNG_SEEDS := {&"encounter": 1001, &"battle": 2002, &"loot": 3003, &"creation": 4004}
 const ALLOWED_AUTOLOADS := ["GameDatabase", "SaveService"]
 const GAME_THEME := "res://scenes/ui/components/game_theme.tres"
 const SCENES_DIR := "res://scenes"
@@ -47,6 +53,7 @@ class EngineErrorCounter extends Logger:
 
 func run(t) -> void:
 	_a01(t)
+	_a02(t)
 	_a06(t)
 	await _a07(t)
 
@@ -91,6 +98,83 @@ func _a01(t) -> void:
 			autoloads.append(name_.trim_prefix("autoload/"))
 	var outside := autoloads.filter(func(n): return not ALLOWED_AUTOLOADS.has(n))
 	t.check("A01", [], outside)
+
+
+# A02: 系列ごとに同じseedを注入した RngService を2つ作り、同じ順に引く（GLS-200, GLS-204, ARC-404, TST-102）
+func _a02(t) -> void:
+	var service_script := load(RNG_SERVICE_SCRIPT) as GDScript
+	t.check("A02", true, service_script != null)
+	if service_script == null:
+		return
+	# 系列は4つ（GLS-200）
+	t.check("A02", RNG_SERIES, service_script.SERIES)
+
+	var first = service_script.new()
+	var second = service_script.new()
+	for id in RNG_SERIES:
+		t.check("A02", true, first.seed_series(id, RNG_SEEDS[id]))
+		t.check("A02", true, second.seed_series(id, RNG_SEEDS[id]))
+		# seed を注入しただけでは引かない（GLS-204）。先頭の値は、同じseedの素の生成器と一致する
+		var plain := RandomNumberGenerator.new()
+		plain.seed = RNG_SEEDS[id]
+		t.check("A02", plain.state, first.series(id).state)
+		t.check("A02", plain.randi(), first.series(id).randi())
+		# 引いた1回を戻して、同じ順で引き直す
+		first.series(id).seed = RNG_SEEDS[id]
+
+	# 系列ごとに、同じ順で引くと同じ値の列になる。系列の引き方（整数、実数、範囲）が混ざっても同じ
+	for id in RNG_SERIES:
+		t.check("A02", _draw(second.series(id)), _draw(first.series(id)))
+
+	# 系列は互いに独立している。ある系列を引いても、他の系列の続きは変わらない（GLS-200）
+	var reference = service_script.new()
+	var disturbed = service_script.new()
+	for id in RNG_SERIES:
+		reference.seed_series(id, RNG_SEEDS[id])
+		disturbed.seed_series(id, RNG_SEEDS[id])
+	_draw(disturbed.series(&"battle"))
+	for id in RNG_SERIES:
+		if id != &"battle":
+			t.check("A02", _draw(reference.series(id)), _draw(disturbed.series(id)))
+	t.check("A02", false, reference.series(&"battle").state == disturbed.series(&"battle").state)
+
+	# 1つの系列へ注入しても、他の系列のseedは変わらない
+	var partial = service_script.new()
+	var before: Dictionary = {}
+	for id in RNG_SERIES:
+		before[id] = partial.series(id).state
+	partial.seed_series(&"loot", RNG_SEEDS[&"loot"])
+	for id in RNG_SERIES:
+		if id != &"loot":
+			t.check("A02", before[id], partial.series(id).state)
+
+	# まとめての注入。系列にない名前が1つでもあれば、何も変えない
+	var bulk = service_script.new()
+	t.check("A02", true, bulk.seed_all(RNG_SEEDS))
+	for id in RNG_SERIES:
+		var one_by_one := RandomNumberGenerator.new()
+		one_by_one.seed = RNG_SEEDS[id]
+		t.check("A02", _draw(one_by_one), _draw(bulk.series(id)))
+	var untouched: int = bulk.series(&"battle").state
+	t.check("A02", false, bulk.seed_all({&"battle": 1, &"no_such_series": 2}))
+	t.check("A02", untouched, bulk.series(&"battle").state)
+	t.check("A02", false, bulk.seed_series(&"no_such_series", 1))
+	t.check("A02", null, bulk.series(&"no_such_series"))
+
+	# 注入しないときは、作るたびにランダムな初期値になる（同じ値の列にならない）
+	var random_a = service_script.new()
+	var random_b = service_script.new()
+	for id in RNG_SERIES:
+		t.check("A02", false, random_a.series(id).state == random_b.series(id).state)
+	random_a.seed_all(RNG_SEEDS)
+	random_a.randomize_all()
+	for id in RNG_SERIES:
+		t.check("A02", false, random_a.series(id).seed == RNG_SEEDS[id])
+
+
+## 系列から、種類の違う引き方で数回引いた値の列。
+func _draw(rng: RandomNumberGenerator) -> Array:
+	return [rng.randi(), rng.randf(), rng.randi_range(0, 5), rng.randi(), rng.randf()]
 
 
 # A06: 画面のシーンとスクリプトが、見た目を共通Theme と Type Variation だけで決めている（ARC-208, PRS-300）

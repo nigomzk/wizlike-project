@@ -23,6 +23,10 @@ enum State {
 	SETTINGS,
 }
 
+## 新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、`preload` で読む。
+const SessionScript := preload("res://scripts/core/game_session.gd")
+const RngScript := preload("res://scripts/services/rng_service.gd")
+
 ## 設定ファイルの区画とキー（PRS-405）。
 const SETTINGS_SECTION := "settings"
 const KEY_MASTER_VOLUME := "master_volume"
@@ -47,7 +51,7 @@ var state: State = State.BOOT
 var master_volume: int = DEFAULT_MASTER_VOLUME
 var fullscreen: bool = false
 
-## 進行中のセッション（ARC-202）。セッションの実装までは常に null で、TITLEの間は存在しない（FLW-108）。
+## 進行中のセッション（ARC-202）。`new_game()` が作る。TITLEの間は存在しない（FLW-108）。
 var session: RefCounted = null
 
 ## テスト用の注入点（TST-106, TST-107）。
@@ -58,6 +62,9 @@ var quit_handler: Callable = Callable()
 var database: Node = null
 var data_dir: String = GameDatabase.DEFAULT_DATA_DIR
 var log_sink: Callable = Callable()
+## 乱数系列の注入点（TST-100, TST-102）。空の場合は、`new_game()` が毎回、ランダムに初期化した `RngService` を作る。
+## 注入した場合は、その `RngService` をセッションに渡す。
+var rng_service: RefCounted = null
 ## セーブの置き場所と設定ファイルのパス。セーブと設定の実装が参照する。
 var save_dir: String = "user://saves"
 var settings_path: String = "user://settings.cfg"
@@ -187,6 +194,19 @@ func has_session() -> bool:
 ## 「はじめから」。既存のセーブスロットには触れない（FLW-002, SAV-003）。
 func request_new_game() -> bool:
 	return _leave_title(State.NEW_GAME)
+
+
+## NEW_GAME でセッションを初期化し、保持する（FLW-002, ARC-301）。成功したら true。
+## NEW_GAME 以外の状態、または初期化に失敗した場合は、何も変えず false。状態の遷移と画面は呼び出し側が行う。
+func new_game() -> bool:
+	if state != State.NEW_GAME or database == null:
+		return false
+	var rng: RefCounted = rng_service if rng_service != null else RngScript.new()
+	var created: RefCounted = SessionScript.create_new(database, rng)
+	if created == null:
+		return false
+	session = created
+	return true
 
 
 ## 「つづきから」。ロードはTITLEからのみ開ける（FLW-102）。
