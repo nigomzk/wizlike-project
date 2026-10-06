@@ -21,6 +21,17 @@ const REAL_SETTINGS_PATH := "user://settings.cfg"
 # PRS-300 の色のトークン（bg_base、bg_scrim）
 const BG_BASE := Color("#0E1420")
 const BG_SCRIM := Color(BG_BASE, 0.35)
+## 起動時の検証（FLW-015, FLW-016, DAT-900）。FL07 が不正を入れる複写の置き場所（TST-107, TST-108）
+const DATA_DIR := "res://data"
+const DATABASE_SCRIPT := "res://scripts/core/game_database.gd"
+const BOOT_ROOT := "user://test_flow_boot"
+const BOOT_DATA_DIR := BOOT_ROOT + "/data"
+## 起動エラーの画面
+const BOOT_ERROR_SCENE := "res://scenes/ui/boot_error.tscn"
+const BOOT_ERROR_TEXT_ID := "boot_error"
+## 参照切れを入れる箇所（skills.csv の power_slash の job_id）
+const BROKEN_FROM := "power_slash,強撃,warrior,"
+const BROKEN_TO := "power_slash,強撃,no_such_job,"
 
 
 ## エンジンが出したエラーと警告の件数を数える（FL09。欠落した画像でエンジンの出力が出ないことの確認）。
@@ -309,6 +320,8 @@ func _fl07(t) -> void:
 
 	_fl07_game_flow(t, save_dir, before)
 	await _fl07_screens(t, save_dir, before)
+	_fl07_boot_game_flow(t)
+	await _fl07_boot_screen(t)
 
 	_remove_dir(tmp_root)
 
@@ -489,6 +502,154 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 	main.free()
 
 
+## 起動時に検証し、成功ならTITLE、失敗ならBOOT_ERROR へ進む。GameFlow だけで確かめる（FLW-015, FLW-016, DAT-900, DAT-908, TST-108）。
+## 受入IDの索引に起動エラー専用のIDがないため、起動の入口である FL07 で確かめる。
+func _fl07_boot_game_flow(t) -> void:
+	var script := load(GAME_FLOW_SCRIPT) as GDScript
+	t.check("FL07", true, script != null)
+	if script == null:
+		return
+	var s = script.State
+	_remove_dir(BOOT_ROOT)
+
+	# 正常なデータ：BOOT から TITLE へ進み、BOOT_ERROR を経由しない。ログは出ない
+	var good := _boot_flow(script, DATA_DIR)
+	t.root.add_child(good["flow"])
+	t.check("FL07", s.TITLE, good["flow"].state)
+	t.check("FL07", [[s.BOOT, s.TITLE]], good["history"])
+	t.check("FL07", true, good["flow"].database.is_loaded())
+	t.check("FL07", [], good["log"])
+	_free_boot_flow(t, good)
+
+	# 参照切れのID：TITLE を経由せず BOOT_ERROR へ進む。問題のファイル名とIDをログへ出す（DAT-908）
+	_copy_data()
+	t.check("FL07", true, _replace_in_data("skills.csv", BROKEN_FROM, BROKEN_TO))
+	var bad := _boot_flow(script, BOOT_DATA_DIR)
+	t.root.add_child(bad["flow"])
+	t.check("FL07", s.BOOT_ERROR, bad["flow"].state)
+	t.check("FL07", [[s.BOOT, s.BOOT_ERROR]], bad["history"])
+	t.check("FL07", false, bad["flow"].database.is_loaded())
+	t.check("FL07", true, bad["log"].any(func(line: String): return line.contains("skills.csv id=power_slash:")))
+	# BOOT_ERROR から、ほかの状態へは進めない。終了だけができる（FLW-016）
+	t.check("FL07", false, bad["flow"].request_new_game())
+	t.check("FL07", false, bad["flow"].open_load())
+	t.check("FL07", false, bad["flow"].open_settings())
+	t.check("FL07", false, bad["flow"].go_back())
+	t.check("FL07", s.BOOT_ERROR, bad["flow"].state)
+	t.check("FL07", 0, bad["quits"][0])
+	bad["flow"].quit_app()
+	t.check("FL07", 1, bad["quits"][0])
+	_free_boot_flow(t, bad)
+
+	# 元に戻すと、再び TITLE へ進む（U07 の後半）
+	_remove_dir(BOOT_ROOT)
+	var restored := _boot_flow(script, DATA_DIR)
+	t.root.add_child(restored["flow"])
+	t.check("FL07", s.TITLE, restored["flow"].state)
+	_free_boot_flow(t, restored)
+	_remove_dir(BOOT_ROOT)
+
+
+## main.tscn の配線のまま、起動不可のエラー画面の表示と操作を確かめる（FLW-016, DAT-900, PRS-704, ARC-204）。
+func _fl07_boot_screen(t) -> void:
+	var packed := load(MAIN_SCENE) as PackedScene
+	t.check("FL07", true, packed != null)
+	var error_scene := load(BOOT_ERROR_SCENE) as PackedScene
+	t.check("FL07", true, error_scene != null)
+	if packed == null or error_scene == null:
+		return
+	var message := _read_text(DATA_DIR + "/texts.csv", BOOT_ERROR_TEXT_ID)
+	t.check("FL07", false, message == "")
+	var sample := error_scene.instantiate()
+	var fallback: String = sample.get_script().FALLBACK_MESSAGE
+	sample.free()
+	t.check("FL07", false, fallback == "")
+
+	# 参照切れ：texts.csv は読めるので、その文を表示する。TITLEの項目や「準備中」は出さない
+	_remove_dir(BOOT_ROOT)
+	_copy_data()
+	t.check("FL07", true, _replace_in_data("skills.csv", BROKEN_FROM, BROKEN_TO))
+	await _fl07_boot_screen_case(t, packed, message)
+
+	# texts.csv 自体を読み込めない：コードに固定した文を表示する（PRS-704）
+	_remove_dir(BOOT_ROOT)
+	_copy_data()
+	DirAccess.remove_absolute(BOOT_DATA_DIR + "/texts.csv")
+	await _fl07_boot_screen_case(t, packed, fallback)
+
+	# texts.csv は読めるが、boot_error の文がない：同じく固定した文を表示し、存在しない文章IDのエラーを出さない（PRS-704）
+	_remove_dir(BOOT_ROOT)
+	_copy_data()
+	var kept := PackedStringArray()
+	for line in FileAccess.get_file_as_string(BOOT_DATA_DIR + "/texts.csv").split("\n"):
+		if not line.begins_with(BOOT_ERROR_TEXT_ID + ","):
+			kept.append(line)
+	var file := FileAccess.open(BOOT_DATA_DIR + "/texts.csv", FileAccess.WRITE)
+	file.store_string("\n".join(kept))
+	file.close()
+	await _fl07_boot_screen_case(t, packed, fallback)
+	_remove_dir(BOOT_ROOT)
+
+
+## 不正なデータで main.tscn を起動し、エラー画面が `expected_message` を表示して、終了できることを確かめる。
+func _fl07_boot_screen_case(t, packed: PackedScene, expected_message: String) -> void:
+	var main := packed.instantiate()
+	var flow: Node = main.get_node_or_null("GameFlow")
+	var host: Control = main.get_node_or_null("ScreenHost")
+	t.check("FL07", true, flow != null and host != null)
+	if flow == null or host == null:
+		main.free()
+		return
+	var s = flow.State
+	var quits := [0]
+	flow.save_dir = BOOT_ROOT + "/saves"
+	flow.settings_path = BOOT_ROOT + "/settings.cfg"
+	flow.quit_handler = func(): quits[0] += 1
+	flow.fullscreen_handler = func(_on: bool): pass
+	flow.data_dir = BOOT_DATA_DIR
+	flow.log_sink = func(_line: String): pass
+	flow.database = load(DATABASE_SCRIPT).new()
+	var logs := EngineLogCounter.new()
+	OS.add_logger(logs)
+	t.root.add_child(main)
+	await t.process_frame
+
+	t.check("FL07", s.BOOT_ERROR, flow.state)
+	var screen: Control = host.current_screen
+	t.check("FL07", true, screen != null and screen.scene_file_path == BOOT_ERROR_SCENE)
+	if screen != null:
+		# メッセージと終了ボタンだけを出す。問題のIDとファイル名は画面に出さない（DAT-908）
+		t.check("FL07", [expected_message], _label_texts(screen))
+		var buttons := _buttons(screen)
+		t.check("FL07", ["終了"], buttons.map(func(b): return b.text))
+		if not buttons.is_empty():
+			var quit_button: Button = buttons[0]
+			t.check("FL07", true, quit_button.has_focus())
+			# 終了ボタンで終了する
+			t.check("FL07", 0, quits[0])
+			quit_button.pressed.emit()
+			t.check("FL07", 1, quits[0])
+			# Enter でも終了する。フォーカスのあるボタンが受けて、二重に呼ばない
+			t.root.push_input(_key_event(KEY_ENTER))
+			t.check("FL07", 2, quits[0])
+			# フォーカスが外れていても、Enter で終了する
+			quit_button.release_focus()
+			t.check("FL07", false, quit_button.has_focus())
+			t.root.push_input(_key_event(KEY_ENTER))
+			t.check("FL07", 3, quits[0])
+			# 入力の遮断中は、Enter でも終了しない（FLW-200）
+			flow.block_input(&"modal")
+			t.root.push_input(_key_event(KEY_ENTER))
+			t.check("FL07", 3, quits[0])
+			flow.unblock_input(&"modal")
+	# 起動エラーの画面を出しても、エンジンのエラーは出ない（存在しない文章IDの参照など）
+	OS.remove_logger(logs)
+	t.check("FL07", 0, logs.count())
+	t.root.remove_child(main)
+	flow.database.free()
+	main.free()
+
+
 # FL09: タイトルの背景画像と、画面背景の部品（PRS-607, PRS-608, PRS-008, PRS-602, FLW-200）
 func _fl09(t) -> void:
 	# 画像：存在し、Texture2D として読め、1920×1080である（PRS-608）
@@ -585,6 +746,65 @@ func _fl09(t) -> void:
 
 	t.root.remove_child(title)
 	title.free()
+
+
+## 起動前の GameFlow。読込元とログの出力先を差し替え、終了要求は回数だけ数える（TST-106, TST-107, TST-108）。
+## データベースもテスト用に作り直し、アプリのAutoloadの状態を変えない。
+func _boot_flow(script: GDScript, data_dir: String) -> Dictionary:
+	var flow: Node = script.new()
+	flow.save_dir = BOOT_ROOT + "/saves"
+	flow.settings_path = BOOT_ROOT + "/settings.cfg"
+	flow.fullscreen_handler = func(_on: bool): pass
+	var quits := [0]
+	flow.quit_handler = func(): quits[0] += 1
+	var log_lines: Array = []
+	flow.data_dir = data_dir
+	flow.log_sink = func(line: String): log_lines.append(line)
+	flow.database = load(DATABASE_SCRIPT).new()
+	var history: Array = []
+	flow.state_changed.connect(func(new_state, old_state): history.append([old_state, new_state]))
+	return {"flow": flow, "history": history, "log": log_lines, "quits": quits}
+
+
+func _free_boot_flow(t, booted: Dictionary) -> void:
+	var flow: Node = booted["flow"]
+	t.root.remove_child(flow)
+	flow.database.free()
+	flow.free()
+
+
+## `res://data` の全CSVを、`user://` 配下の置き場所へ複写する（開発者の `data/` を変えない）
+func _copy_data() -> void:
+	DirAccess.make_dir_recursive_absolute(BOOT_DATA_DIR)
+	for file in DirAccess.get_files_at(DATA_DIR):
+		if file.ends_with(".csv"):
+			var out := FileAccess.open("%s/%s" % [BOOT_DATA_DIR, file], FileAccess.WRITE)
+			out.store_buffer(FileAccess.get_file_as_bytes("%s/%s" % [DATA_DIR, file]))
+
+
+## 複写したCSVの文字列を置き換える。見つからなければ false
+func _replace_in_data(file: String, from: String, to: String) -> bool:
+	var path := "%s/%s" % [BOOT_DATA_DIR, file]
+	var text := FileAccess.get_file_as_string(path)
+	if not text.contains(from):
+		return false
+	var out := FileAccess.open(path, FileAccess.WRITE)
+	out.store_string(text.replace(from, to))
+	out.close()
+	return true
+
+
+## texts.csv から、IDの文章を読む。なければ空
+func _read_text(path: String, id: String) -> String:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return ""
+	file.get_csv_line()
+	while not file.eof_reached():
+		var row := file.get_csv_line()
+		if row.size() >= 2 and row[0] == id:
+			return row[1]
+	return ""
 
 
 func _key_event(keycode: Key) -> InputEventKey:

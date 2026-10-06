@@ -53,6 +53,11 @@ var session: RefCounted = null
 ## テスト用の注入点（TST-106, TST-107）。
 ## 終了要求。空の Callable の場合は `SceneTree.quit()` を呼ぶ。
 var quit_handler: Callable = Callable()
+## 起動時の検証（FLW-015, DAT-900）。`database` が空の場合は Autoload の `GameDatabase` を使う。
+## 読込元とログの出力先は `load_and_validate()` へそのまま渡す（TST-108）。ログの出力先が空の場合は `push_error` へ出る（DAT-908）。
+var database: Node = null
+var data_dir: String = GameDatabase.DEFAULT_DATA_DIR
+var log_sink: Callable = Callable()
 ## セーブの置き場所と設定ファイルのパス。セーブと設定の実装が参照する。
 var save_dir: String = "user://saves"
 var settings_path: String = "user://settings.cfg"
@@ -69,13 +74,19 @@ func _ready() -> void:
 	boot()
 
 
-## BOOT から TITLE へ進む（FLW-015）。データベースの読込は、その実装時にここへ加える。
-## 起動時に、ウィンドウの最小サイズを設定し（PRS-000）、設定を読み込んで反映する（PRS-405）。
+## BOOT から TITLE か BOOT_ERROR へ進む（FLW-015, FLW-016, DAT-900）。
+## 起動時に、ウィンドウの最小サイズを設定し（PRS-000）、設定を読み込んで反映し（PRS-405）、データを検証する。
+## 検証に失敗した場合は、TITLE を経由せず BOOT_ERROR へ進む。
 func boot() -> void:
 	if state == State.BOOT:
 		get_window().min_size = MIN_WINDOW_SIZE
 		load_settings()
-		_change_state(State.TITLE)
+		if database == null:
+			database = GameDatabase
+		if database.load_and_validate(data_dir, log_sink):
+			_change_state(State.TITLE)
+		else:
+			_change_state(State.BOOT_ERROR)
 
 
 # --- 設定（PRS-400, PRS-401, PRS-402, PRS-405） ---
