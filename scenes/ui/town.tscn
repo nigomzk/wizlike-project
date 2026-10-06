@@ -1,0 +1,117 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/town.gd" id="1_town"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/screen_background.tscn" id="2_bg"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/gold_header.tscn" id="3_header"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/availability_button.tscn" id="4_button"]
+
+[node name="Town" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_town")
+
+[node name="Background" parent="." instance=ExtResource("2_bg")]
+layout_mode = 1
+texture_path = "res://assets/backgrounds/town.png"
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Stack" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_type_variation = &"StackL"
+
+[node name="Columns" type="HBoxContainer" parent="Center/Stack"]
+layout_mode = 2
+
+[node name="FacilityPanel" type="PanelContainer" parent="Center/Stack/Columns"]
+layout_mode = 2
+
+[node name="Inner" type="PanelContainer" parent="Center/Stack/Columns/FacilityPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Items" type="VBoxContainer" parent="Center/Stack/Columns/FacilityPanel/Inner"]
+layout_mode = 2
+
+[node name="Guild" parent="Center/Stack/Columns/FacilityPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "ギルド"
+
+[node name="Temple" parent="Center/Stack/Columns/FacilityPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "教会"
+
+[node name="Shop" parent="Center/Stack/Columns/FacilityPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "商店"
+
+[node name="Inn" parent="Center/Stack/Columns/FacilityPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "宿屋"
+
+[node name="Tavern" parent="Center/Stack/Columns/FacilityPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "酒場"
+
+[node name="OtherPanel" type="PanelContainer" parent="Center/Stack/Columns"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="Inner" type="PanelContainer" parent="Center/Stack/Columns/OtherPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Items" type="VBoxContainer" parent="Center/Stack/Columns/OtherPanel/Inner"]
+layout_mode = 2
+
+[node name="Departure" parent="Center/Stack/Columns/OtherPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "ダンジョンへ"
+
+[node name="Menu" parent="Center/Stack/Columns/OtherPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "メニュー"
+
+[node name="Save" parent="Center/Stack/Columns/OtherPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "セーブ"
+
+[node name="Title" parent="Center/Stack/Columns/OtherPanel/Inner/Items" instance=ExtResource("4_button")]
+unique_name_in_owner = true
+layout_mode = 2
+label = "タイトルへ"
+
+[node name="Guide" type="Label" parent="Center/Stack"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="GoldHeader" parent="." instance=ExtResource("3_header")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 24.0
+grow_horizontal = 0

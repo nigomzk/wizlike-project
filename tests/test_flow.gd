@@ -14,6 +14,21 @@ const BACKGROUND_SCENE := "res://scenes/ui/components/screen_background.tscn"
 const GAME_THEME := "res://scenes/ui/components/game_theme.tres"
 const TITLE_BACKGROUND := "res://assets/backgrounds/title.png"
 const MISSING_BACKGROUND := "res://assets/backgrounds/no_such_screen.png"
+const TEXT_SCREEN_SCENE := "res://scenes/ui/text_screen.tscn"
+const TOWN_SCENE := "res://scenes/ui/town.tscn"
+const TOWN_BACKGROUND := "res://assets/backgrounds/town.png"
+const CHARACTER_SCRIPT := "res://scripts/models/character_state.gd"
+## 街の項目（town.md §2）。表示名の順と、GameFlow へ送る操作（FLW-004）
+const TOWN_ITEMS := ["ギルド", "教会", "商店", "宿屋", "酒場", "ダンジョンへ", "メニュー", "セーブ", "タイトルへ"]
+const TOWN_ACTIONS: Array[StringName] = [&"guild", &"temple", &"shop", &"inn", &"tavern", &"departure", &"menu", &"save", &"title"]
+## 登録者が0人の間も使える項目（TWN-112）
+const TOWN_ITEMS_ALWAYS := ["ギルド", "タイトルへ"]
+const TOWN_ACTIONS_ALWAYS: Array[StringName] = [&"guild", &"title"]
+## 選択不可の項目名に添える文字（PRS-305）と、所持金ヘッダーの表示（components.md）
+const UNAVAILABLE_SUFFIX := "（不可）"
+const GOLD_FORMAT := "所持金 %dG"
+## FL08 が GameFlow に渡す、設定とスロットの一時的な置き場所（TST-107）
+const FL08_TMP_ROOT := "user://test_flow_fl08"
 ## FL06 が GameFlow に渡す、設定とスロットの一時的な置き場所（TST-107）
 const FL06_TMP_ROOT := "user://test_flow_fl06"
 ## 開発者の実際の設定ファイル。FL06 が変更しないことを確かめる（TST-107）
@@ -64,6 +79,7 @@ class EngineLogCounter extends Logger:
 func run(t) -> void:
 	await _fl06(t)
 	await _fl07(t)
+	await _fl08(t)
 	await _fl09(t)
 
 
@@ -347,14 +363,19 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	t.check("FL07", false, flow.has_session())
 
 	# 「はじめから」→ NEW_GAME。既存スロットは変更されない（FLW-002, SAV-003）
-	t.check("FL07", true, flow.request_new_game())
+	t.check("FL07", true, flow.new_game())
 	t.check("FL07", s.NEW_GAME, flow.state)
 	t.check("FL07", before, _snapshot(save_dir))
 	# NEW_GAME から「はじめから」や「つづきから」は受け付けない（FLW-102）
-	t.check("FL07", false, flow.request_new_game())
+	t.check("FL07", false, flow.new_game())
 	t.check("FL07", false, flow.open_load())
 	t.check("FL07", s.NEW_GAME, flow.state)
-	t.check("FL07", true, flow.go_back())
+	# NEW_GAME は仮画面ではなく、戻る操作はない。決定で TOWN へ進む（FLW-002）。街の「タイトルへ」でセッションを破棄して TITLE へ戻る（FLW-108）
+	t.check("FL07", false, flow.go_back())
+	t.check("FL07", s.NEW_GAME, flow.state)
+	t.check("FL07", true, flow.go_town())
+	t.check("FL07", s.TOWN, flow.state)
+	t.check("FL07", true, flow.return_title())
 	t.check("FL07", s.TITLE, flow.state)
 	t.check("FL07", false, flow.has_session())
 
@@ -371,10 +392,11 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	t.check("FL07", true, flow.go_back())
 	t.check("FL07", s.TITLE, flow.state)
 	# TITLEとMENU以外からSETTINGSは開けない（FLW-111）
-	t.check("FL07", true, flow.request_new_game())
+	t.check("FL07", true, flow.new_game())
 	t.check("FL07", false, flow.open_settings())
 	t.check("FL07", s.NEW_GAME, flow.state)
-	flow.go_back()
+	flow.go_town()
+	flow.return_title()
 
 	# 「終了」→ 差し替えた終了要求が1回呼ばれる。ランナーは止まらない（FLW-001, TST-106）
 	t.check("FL07", 0, quits[0])
@@ -384,10 +406,10 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	# 遷移の履歴：TITLEを起点に、押した順にたどる
 	t.check("FL07", [
 		[s.BOOT, s.TITLE],
-		[s.TITLE, s.NEW_GAME], [s.NEW_GAME, s.TITLE],
+		[s.TITLE, s.NEW_GAME], [s.NEW_GAME, s.TOWN], [s.TOWN, s.TITLE],
 		[s.TITLE, s.LOAD], [s.LOAD, s.TITLE],
 		[s.TITLE, s.SETTINGS], [s.SETTINGS, s.TITLE],
-		[s.TITLE, s.NEW_GAME], [s.NEW_GAME, s.TITLE],
+		[s.TITLE, s.NEW_GAME], [s.NEW_GAME, s.TOWN], [s.TOWN, s.TITLE],
 	], history)
 
 	# 入力遮断は理由の集合で保持する。1つでも残っている間は遮断が続き、遷移の要求を受け付けない（FLW-204）
@@ -395,16 +417,18 @@ func _fl07_game_flow(t, save_dir: String, before: Dictionary) -> void:
 	flow.block_input(&"modal")
 	flow.block_input(&"animation")
 	t.check("FL07", true, flow.is_input_blocked())
-	t.check("FL07", false, flow.request_new_game())
+	t.check("FL07", false, flow.new_game())
 	t.check("FL07", false, flow.open_load())
 	t.check("FL07", false, flow.open_settings())
 	t.check("FL07", s.TITLE, flow.state)
+	t.check("FL07", false, flow.has_session())
 	flow.unblock_input(&"modal")
 	t.check("FL07", true, flow.is_input_blocked())
 	flow.unblock_input(&"animation")
 	t.check("FL07", false, flow.is_input_blocked())
-	t.check("FL07", true, flow.request_new_game())
-	flow.go_back()
+	t.check("FL07", true, flow.new_game())
+	flow.go_town()
+	flow.return_title()
 
 	t.check("FL07", before, _snapshot(save_dir))
 	t.root.remove_child(flow)
@@ -454,8 +478,11 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 			t.check("FL07", previous_button, buttons[i].find_prev_valid_focus())
 
 	# 項目を押して、遷移先と、仮画面「準備中」と戻るを確かめる（PRS-208）
+	# 「はじめから」は仮画面ではなく導入の画面へ進む。下の FL08 の確認へ続く
 	var expected_states := [s.NEW_GAME, s.LOAD, s.SETTINGS]
 	for i in expected_states.size():
+		if i == 0:
+			continue
 		_press(host.current_screen, TITLE_ITEMS[i])
 		t.check("FL07", expected_states[i], flow.state)
 		if expected_states[i] == s.SETTINGS:
@@ -473,13 +500,23 @@ func _fl07_screens(t, save_dir: String, before: Dictionary) -> void:
 		t.check("FL07", false, flow.has_session())
 		await t.process_frame
 		t.check("FL07", true, _buttons(placeholder)[0].has_focus())
-		if i == 0:
+		if i == 1:
 			# Esc でも遷移元へ戻る。画面が差し替わった後に、外れたノードの処理で止まらない（PRS-208）
 			t.root.push_input(_action_event(&"ui_cancel"))
 		else:
 			_press(placeholder, "戻る")
 		t.check("FL07", s.TITLE, flow.state)
 		t.check("FL07", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))
+
+	# 「はじめから」で導入の文章画面へ進む。中身は FL08 で確かめる（PRS-208 の仮画面ではない）。ここでは遷移と、TITLEへ戻るまでを確かめる
+	_press(host.current_screen, TITLE_ITEMS[0])
+	t.check("FL07", s.NEW_GAME, flow.state)
+	t.check("FL07", false, _label_texts(host.current_screen).has("準備中"))
+	flow.go_town()
+	flow.return_title()
+	t.check("FL07", s.TITLE, flow.state)
+	t.check("FL07", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))
+	t.check("FL07", false, flow.has_session())
 
 	# 入力の遮断中は、背景の入力を止める（FLW-200, FLW-204）
 	var blocker: Control = host.input_blocker
@@ -531,7 +568,7 @@ func _fl07_boot_game_flow(t) -> void:
 	t.check("FL07", false, bad["flow"].database.is_loaded())
 	t.check("FL07", true, bad["log"].any(func(line: String): return line.contains("skills.csv id=power_slash:")))
 	# BOOT_ERROR から、ほかの状態へは進めない。終了だけができる（FLW-016）
-	t.check("FL07", false, bad["flow"].request_new_game())
+	t.check("FL07", false, bad["flow"].new_game())
 	t.check("FL07", false, bad["flow"].open_load())
 	t.check("FL07", false, bad["flow"].open_settings())
 	t.check("FL07", false, bad["flow"].go_back())
@@ -736,6 +773,335 @@ func _fl09(t) -> void:
 	title.free()
 
 
+# FL08: 登録者を作成した後、TOWNから「タイトルへ」を選び、再度「はじめから」を選ぶ（FLW-002, FLW-004, FLW-108, FLW-110, FLW-204, TWN-110, TWN-111, TWN-112, PRS-205, PRS-208, PRS-503, ARC-202, ARC-203）。
+# 登録（ギルド）は #10 で実装するため、登録者はテストが直接セッションへ入れる。「登録を含む部分」は成功にせずスキップのまま残す（TST-411）。
+# 確かめるのは、NEW_GAMEでのセッションの作成、導入文から街への遷移、登録前の制限、タイトルへ戻るときの破棄、再度の「はじめから」で別のセッションになること。
+func _fl08(t) -> void:
+	_fl08_game_flow(t)
+	await _fl08_screens(t)
+	t.skip("FL08", "ギルドでの登録（#10）を含む部分は判定していない。登録を含まない部分（セッションの作成と破棄、街の制限、画面）だけを確かめた")
+
+
+## GameFlow だけで、セッションの作成と破棄、街の項目の可否と遷移を確かめる（FLW-002, FLW-108, FLW-110, FLW-204, TWN-110〜112, ARC-203）。
+func _fl08_game_flow(t) -> void:
+	var script := load(GAME_FLOW_SCRIPT) as GDScript
+	t.check("FL08", true, script != null)
+	if script == null:
+		return
+	var s = script.State
+	var db = load(DATABASE_SCRIPT).new()
+	t.check("FL08", true, db.load_and_validate(DATA_DIR, func(_line: String) -> void: pass))
+	var flow: Node = script.new()
+	flow.save_dir = FL08_TMP_ROOT + "/saves"
+	flow.settings_path = FL08_TMP_ROOT + "/settings.cfg"
+	flow.fullscreen_handler = func(_on: bool) -> void: pass
+	flow.database = db
+	var history: Array = []
+	flow.state_changed.connect(func(new_state, old_state): history.append([old_state, new_state]))
+	t.root.add_child(flow)
+
+	# TITLE：セッションがなく、街の操作はできない
+	t.check("FL08", s.TITLE, flow.state)
+	t.check("FL08", false, flow.has_session())
+	t.check("FL08", false, flow.go_town())
+	t.check("FL08", false, flow.return_title())
+	t.check("FL08", false, flow.select_town_action(&"guild").ok)
+	t.check("FL08", s.TITLE, flow.state)
+
+	# 「はじめから」：NEW_GAMEに入る時点で、導入を表示する前にセッションを作る（FLW-002）
+	t.check("FL08", true, flow.new_game())
+	t.check("FL08", s.NEW_GAME, flow.state)
+	t.check("FL08", true, flow.has_session())
+	var first = flow.session
+	var first_id: String = first.session_id
+	t.check("FL08", true, first_id != "")
+	# 導入の間は、街の操作とタイトルへ戻る操作を受け付けない（FLW-002）
+	t.check("FL08", false, flow.return_title())
+	t.check("FL08", false, flow.select_town_action(&"guild").ok)
+	t.check("FL08", s.NEW_GAME, flow.state)
+	t.check("FL08", true, flow.has_session())
+
+	# 入力の遮断中は、導入から街へ進めない（FLW-204）
+	flow.block_input(&"modal")
+	t.check("FL08", false, flow.go_town())
+	t.check("FL08", s.NEW_GAME, flow.state)
+	flow.unblock_input(&"modal")
+
+	# 導入の決定で TOWN へ進む。セッションは同じものを引き継ぐ（FLW-002）
+	t.check("FL08", true, flow.go_town())
+	t.check("FL08", s.TOWN, flow.state)
+	t.check("FL08", true, flow.session == first)
+	t.check("FL08", false, flow.go_town())
+
+	# 登録者が0人の間：ギルドとタイトルへ以外は選べず、`LOCKED` を返す（TWN-110, TWN-112, FLW-110）
+	t.check("FL08", true, flow.is_town_restricted())
+	for action in TOWN_ACTIONS:
+		var result: Dictionary = flow.check_town_action(action)
+		var open: bool = TOWN_ACTIONS_ALWAYS.has(action)
+		t.check("FL08", open, result.ok)
+		t.check("FL08", "" if open else "LOCKED", String(result.error_code))
+	t.check("FL08", false, flow.check_town_action(&"no_such_action").ok)
+	t.check("FL08", "INVALID_TARGET", String(flow.check_town_action(&"no_such_action").error_code))
+	for action in TOWN_ACTIONS:
+		if TOWN_ACTIONS_ALWAYS.has(action):
+			continue
+		var locked: Dictionary = flow.select_town_action(action)
+		t.check("FL08", false, locked.ok)
+		t.check("FL08", "LOCKED", String(locked.error_code))
+		t.check("FL08", s.TOWN, flow.state)
+	t.check("FL08", true, flow.session == first)
+	t.check("FL08", false, first.dirty)
+
+	# ギルドは選べる。選択できるが未実装の遷移先は FACILITY へ遷移し、戻るで TOWN へ戻る（PRS-208）
+	var opened: Dictionary = flow.select_town_action(&"guild")
+	t.check("FL08", true, opened.ok)
+	t.check("FL08", s.FACILITY, flow.state)
+	t.check("FL08", "guild", String(flow.facility))
+	t.check("FL08", true, flow.go_back())
+	t.check("FL08", s.TOWN, flow.state)
+	t.check("FL08", true, flow.session == first)
+
+	# 登録者が1人以上になると、すべて選べる。各項目の遷移先と、戻るで TOWN へ戻ること（TWN-111, FLW-110）
+	var character = load(CHARACTER_SCRIPT).new()
+	character.id = 1
+	first.characters.append(character)
+	t.check("FL08", false, flow.is_town_restricted())
+	var destinations := {
+		&"guild": s.FACILITY, &"temple": s.FACILITY, &"shop": s.FACILITY, &"inn": s.FACILITY, &"tavern": s.FACILITY,
+		&"departure": s.DEPARTURE, &"menu": s.MENU, &"save": s.SAVE,
+	}
+	for action in destinations:
+		t.check("FL08", true, flow.check_town_action(action).ok)
+		t.check("FL08", true, flow.select_town_action(action).ok)
+		t.check("FL08", destinations[action], flow.state)
+		if destinations[action] == s.FACILITY:
+			t.check("FL08", String(action), String(flow.facility))
+		# 入力の遮断中は、戻れない（FLW-204）
+		flow.block_input(&"modal")
+		t.check("FL08", false, flow.go_back())
+		t.check("FL08", destinations[action], flow.state)
+		flow.unblock_input(&"modal")
+		t.check("FL08", true, flow.go_back())
+		t.check("FL08", s.TOWN, flow.state)
+	# 入力の遮断中は、街の項目を選べない（FLW-204）
+	flow.block_input(&"modal")
+	t.check("FL08", false, flow.select_town_action(&"guild").ok)
+	t.check("FL08", false, flow.return_title())
+	t.check("FL08", s.TOWN, flow.state)
+	flow.unblock_input(&"modal")
+	# 最後の登録者を削除すると、再び制限される（TWN-111）
+	first.characters.clear()
+	t.check("FL08", true, flow.is_town_restricted())
+	t.check("FL08", false, flow.check_town_action(&"menu").ok)
+
+	# セッションの状態を変えてから「タイトルへ」。セッションを破棄する（FLW-108, ARC-203）
+	first.characters.append(character)
+	first.gold += 100
+	first.day = 4
+	first.dirty = true
+	t.check("FL08", true, flow.select_town_action(&"title").ok)
+	t.check("FL08", s.TITLE, flow.state)
+	t.check("FL08", false, flow.has_session())
+	t.check("FL08", null, flow.session)
+	# TITLE へ戻った後は、街の操作を受け付けない
+	t.check("FL08", false, flow.select_town_action(&"guild").ok)
+	t.check("FL08", false, flow.go_town())
+
+	# 再度の「はじめから」：別の session_id の新しいセッションが、ニューゲームの初期状態で作られる。旧セッションの内容は残らない（FLW-002, ARC-202）
+	t.check("FL08", true, flow.new_game())
+	var second = flow.session
+	t.check("FL08", true, second != first)
+	t.check("FL08", true, second.session_id != first_id)
+	t.check("FL08", db.new_game_gold, second.gold)
+	t.check("FL08", 1, second.day)
+	t.check("FL08", 0, second.characters.size())
+	t.check("FL08", 0, second.party_ids.size())
+	t.check("FL08", 1, second.next_character_id)
+	t.check("FL08", false, second.dirty)
+	t.check("FL08", 1, first.characters.size())
+
+	# 履歴：NEW_GAME → TOWN → 各項目 → TOWN ... → TITLE → NEW_GAME
+	var expected_history: Array = [[s.BOOT, s.TITLE], [s.TITLE, s.NEW_GAME], [s.NEW_GAME, s.TOWN]]
+	expected_history.append_array([[s.TOWN, s.FACILITY], [s.FACILITY, s.TOWN]])
+	for action in destinations:
+		expected_history.append_array([[s.TOWN, destinations[action]], [destinations[action], s.TOWN]])
+	expected_history.append_array([[s.TOWN, s.TITLE], [s.TITLE, s.NEW_GAME]])
+	t.check("FL08", expected_history, history)
+
+	t.root.remove_child(flow)
+	flow.free()
+	db.free()
+
+
+## main.tscn の配線のまま、導入の文章画面と街の画面を確かめる（FLW-002, PRS-205, PRS-208, PRS-503, TWN-110, TWN-112, ARC-205）。
+func _fl08_screens(t) -> void:
+	var packed := load(MAIN_SCENE) as PackedScene
+	t.check("FL08", true, packed != null)
+	if packed == null:
+		return
+	var main := packed.instantiate()
+	var flow: Node = main.get_node_or_null("GameFlow")
+	var host: Control = main.get_node_or_null("ScreenHost")
+	t.check("FL08", true, flow != null and host != null)
+	if flow == null or host == null:
+		main.free()
+		return
+	var s = flow.State
+	flow.save_dir = FL08_TMP_ROOT + "/saves"
+	flow.settings_path = FL08_TMP_ROOT + "/settings.cfg"
+	flow.fullscreen_handler = func(_on: bool) -> void: pass
+	t.root.add_child(main)
+	await t.process_frame
+	t.check("FL08", s.TITLE, flow.state)
+
+	var intro := _read_text(DATA_DIR + "/texts.csv", "intro")
+	var guide := _read_text(DATA_DIR + "/texts.csv", "town_need_register")
+	t.check("FL08", false, intro == "" or guide == "")
+	var start_gold: int = flow.database.new_game_gold
+
+	# タイトルで Enter を押す。押した Enter は導入に持ち越されず、キーリピートでも導入は進まない（PRS-503）
+	t.check("FL08", true, _buttons(host.current_screen)[0].has_focus())
+	t.root.push_input(_key_event_full(KEY_ENTER, true, false))
+	t.root.push_input(_key_event_full(KEY_ENTER, false, false))
+	t.check("FL08", s.NEW_GAME, flow.state)
+	t.root.push_input(_key_event_full(KEY_ENTER, true, true))
+	t.root.push_input(_key_event_full(KEY_ENTER, true, true))
+	t.root.push_input(_key_event_full(KEY_ENTER, false, false))
+	await t.process_frame
+	t.check("FL08", s.NEW_GAME, flow.state)
+
+	# 導入：`intro` だけを表示する。セッションは表示の前にある。仮画面ではない（FLW-002, PRS-208）
+	var screen: Control = host.current_screen
+	t.check("FL08", TEXT_SCREEN_SCENE, screen.scene_file_path)
+	t.check("FL08", [intro], _label_texts(screen))
+	t.check("FL08", [], _buttons(screen))
+	t.check("FL08", true, flow.has_session())
+	var first_id: String = flow.session.session_id
+	t.check("FL08", true, first_id != "")
+
+	# 決定以外では進まない：右クリック、マウスボタンの解放、ほかのキー、キーの解放（PRS-503）
+	t.root.push_input(_mouse_click(t, MOUSE_BUTTON_RIGHT, true))
+	t.root.push_input(_mouse_click(t, MOUSE_BUTTON_LEFT, false))
+	t.root.push_input(_key_event_full(KEY_A, true, false))
+	t.root.push_input(_key_event_full(KEY_ENTER, false, false))
+	await t.process_frame
+	t.check("FL08", s.NEW_GAME, flow.state)
+	# 入力の遮断中は、決定でも進まない（FLW-200）
+	flow.block_input(&"modal")
+	t.root.push_input(_key_event_full(KEY_ENTER, true, false))
+	t.check("FL08", s.NEW_GAME, flow.state)
+	flow.unblock_input(&"modal")
+
+	# Enter の決定で、最後の文章から TOWN へ進む（FLW-002, PRS-503）
+	t.root.push_input(_key_event_full(KEY_ENTER, true, false))
+	t.check("FL08", s.TOWN, flow.state)
+	await t.process_frame
+	await _fl08_town_screen(t, flow, host, guide, start_gold)
+
+	# 「タイトルへ」：セッションを破棄して TITLE へ戻る。確認は出さない（段階D まで。FLW-108）
+	_press(host.current_screen, "タイトルへ")
+	t.check("FL08", s.TITLE, flow.state)
+	t.check("FL08", false, flow.has_session())
+	t.check("FL08", TITLE_ITEMS, _buttons(host.current_screen).map(func(b): return b.text))
+
+	# 再度の「はじめから」：左クリックの決定でも進む。別の session_id で、ニューゲームの初期状態になる
+	_press(host.current_screen, "はじめから")
+	t.check("FL08", s.NEW_GAME, flow.state)
+	t.check("FL08", true, flow.session.session_id != first_id)
+	t.root.push_input(_mouse_click(t, MOUSE_BUTTON_LEFT, true))
+	t.check("FL08", s.TOWN, flow.state)
+	await t.process_frame
+	t.check("FL08", start_gold, flow.session.gold)
+	t.check("FL08", 0, flow.session.characters.size())
+	t.check("FL08", true, _shown_label_texts(host.current_screen).has(guide))
+
+	_free_main(t, main)
+	_remove_dir(FL08_TMP_ROOT)
+
+
+## 街の画面：登録前の制限の表示、選択不可、遷移、登録後の表示、所持金（town.md, components.md, TWN-110, TWN-112, PRS-205, PRS-305）。
+func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: int) -> void:
+	var s = flow.State
+	var screen: Control = host.current_screen
+	t.check("FL08", TOWN_SCENE, screen.scene_file_path)
+
+	# 背景は共通部品「画面背景」を最初の子に置く（PRS-607）。画像は #11 まで無く、あっても無くても同じ部品が扱う
+	var background: Control = screen.get_child(0)
+	t.check("FL08", BACKGROUND_SCENE, background.scene_file_path)
+	t.check("FL08", TOWN_BACKGROUND, background.texture_path)
+
+	# 表示：9項目を順に並べ、登録者が0人の間は、ギルドとタイトルへ以外に「（不可）」を添えて無効にする（TWN-110, PRS-305）
+	var buttons := _buttons(screen)
+	var expected_text := []
+	var expected_disabled := []
+	for item in TOWN_ITEMS:
+		var open: bool = TOWN_ITEMS_ALWAYS.has(item)
+		expected_text.append(item if open else item + UNAVAILABLE_SUFFIX)
+		expected_disabled.append(not open)
+	t.check("FL08", expected_text, buttons.map(func(b): return b.text))
+	t.check("FL08", expected_disabled, buttons.map(func(b): return b.disabled))
+	# 案内文と所持金ヘッダー（PRS-205）
+	var labels := _shown_label_texts(screen)
+	t.check("FL08", true, labels.has(guide))
+	t.check("FL08", true, labels.has(GOLD_FORMAT % start_gold))
+	# 最初の項目（ギルド）にフォーカスがある（PRS-007）。選べない項目はフォーカスを受けず、Tab と矢印キーは選べる項目だけを巡る（PRS-304）
+	t.check("FL08", true, buttons[0].has_focus())
+	t.check("FL08", expected_disabled.map(func(d): return Control.FOCUS_NONE if d else Control.FOCUS_ALL), buttons.map(func(b): return b.focus_mode))
+	t.check("FL08", buttons[8], buttons[0].find_next_valid_focus())
+	t.check("FL08", buttons[0], buttons[8].find_next_valid_focus())
+
+	# 選べない項目は、押しても遷移しない。GameFlow が `LOCKED` を返し、画面は判断しない（FLW-204）
+	_press(screen, "教会（不可）")
+	_press(screen, "メニュー（不可）")
+	t.check("FL08", s.TOWN, flow.state)
+
+	# ギルドは仮画面へ。戻るで街へ戻る（PRS-208）
+	_press(screen, "ギルド")
+	t.check("FL08", s.FACILITY, flow.state)
+	t.check("FL08", ["準備中"], _label_texts(host.current_screen))
+	_press(host.current_screen, "戻る")
+	t.check("FL08", s.TOWN, flow.state)
+	await t.process_frame
+	screen = host.current_screen
+	t.check("FL08", TOWN_SCENE, screen.scene_file_path)
+
+	# セッションの変更の通知で、表示を更新する（ARC-205）。登録者が1人入ると、案内文が消えて、すべて選べる
+	var character = load(CHARACTER_SCRIPT).new()
+	character.id = 1
+	flow.session.characters.append(character)
+	flow.session.notify_changed(&"characters")
+	buttons = _buttons(screen)
+	t.check("FL08", TOWN_ITEMS, buttons.map(func(b): return b.text))
+	t.check("FL08", [false, false, false, false, false, false, false, false, false], buttons.map(func(b): return b.disabled))
+	t.check("FL08", [Control.FOCUS_ALL], buttons.map(func(b): return b.focus_mode).reduce(func(modes, m): return modes if modes.has(m) else modes + [m], []))
+	t.check("FL08", false, _shown_label_texts(screen).has(guide))
+	# 所持金が変わると、ヘッダーが直後に更新される
+	flow.session.gold = start_gold + 321
+	flow.session.notify_changed(&"gold")
+	t.check("FL08", true, _label_texts(screen).has(GOLD_FORMAT % (start_gold + 321)))
+
+	# 登録後は、すべての項目を選べる。選択できるが未実装の遷移先は、仮画面へ遷移する（PRS-208）
+	var expected_states := {
+		"教会": s.FACILITY, "商店": s.FACILITY, "宿屋": s.FACILITY, "酒場": s.FACILITY,
+		"ダンジョンへ": s.DEPARTURE, "メニュー": s.MENU, "セーブ": s.SAVE,
+	}
+	for item in expected_states:
+		_press(host.current_screen, item)
+		t.check("FL08", expected_states[item], flow.state)
+		t.check("FL08", ["準備中"], _label_texts(host.current_screen))
+		# Esc でも戻る
+		t.root.push_input(_action_event(&"ui_cancel"))
+		t.check("FL08", s.TOWN, flow.state)
+		t.check("FL08", TOWN_SCENE, host.current_screen.scene_file_path)
+		await t.process_frame
+
+	# 登録者を削除すると、再び制限して案内文を出す（TWN-111）
+	flow.session.characters.clear()
+	flow.session.notify_changed(&"characters")
+	t.check("FL08", true, _shown_label_texts(host.current_screen).has(guide))
+	t.check("FL08", expected_text, _buttons(host.current_screen).map(func(b): return b.text))
+
+
 ## 起動前の GameFlow。読込元とログの出力先を差し替え、終了要求は回数だけ数える（TST-106, TST-107, TST-108）。
 ## データベースもテスト用に作り直し、アプリのAutoloadの状態を変えない。
 func _boot_flow(script: GDScript, data_dir: String) -> Dictionary:
@@ -793,6 +1159,23 @@ func _read_text(path: String, id: String) -> String:
 		if row.size() >= 2 and row[0] == id:
 			return row[1]
 	return ""
+
+
+func _key_event_full(keycode: Key, pressed: bool, echo: bool) -> InputEventKey:
+	var event := _key_event(keycode)
+	event.pressed = pressed
+	event.echo = echo
+	return event
+
+
+## ビューポートの中央での、マウスボタンの押下または解放
+func _mouse_click(t, button: MouseButton, pressed: bool) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	event.position = t.root.get_visible_rect().get_center()
+	event.global_position = event.position
+	return event
 
 
 func _key_event(keycode: Key) -> InputEventKey:
@@ -864,6 +1247,11 @@ func _buttons(root: Node) -> Array:
 
 func _label_texts(root: Node) -> Array:
 	return root.find_children("*", "Label", true, false).map(func(l): return l.text)
+
+
+## 表示されているラベルの文字（非表示のラベルを除く）
+func _shown_label_texts(root: Node) -> Array:
+	return root.find_children("*", "Label", true, false).filter(func(l): return l.is_visible_in_tree()).map(func(l): return l.text)
 
 
 func _press(root: Node, text: String) -> void:

@@ -3,7 +3,8 @@ extends Node
 ## 画面は判断を持たず、ここへ要求を送って状態の変化を表示する（ARC-204, ARC-205）。
 ## `class_name` は付けない。クラス登録のキャッシュがない状態でも、パスの `preload` で参照できるようにするため。
 
-## 状態（FLW-001, FLW-002, FLW-003, FLW-004, FLW-005, FLW-006, FLW-007, FLW-008, FLW-009, FLW-010, FLW-011, FLW-012, FLW-013, FLW-014, FLW-015, FLW-016）
+## 状態（FLW-001, FLW-002, FLW-003, FLW-004, FLW-005, FLW-006, FLW-007, FLW-008, FLW-009, FLW-010, FLW-011, FLW-012, FLW-013, FLW-014, FLW-015, FLW-016）。
+## SAVE は、街から開くセーブの画面（FLW-004）。
 enum State {
 	BOOT,
 	BOOT_ERROR,
@@ -21,11 +22,29 @@ enum State {
 	ENDING,
 	MENU,
 	SETTINGS,
+	SAVE,
 }
 
 ## 新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、`preload` で読む。
 const SessionScript := preload("res://scripts/core/game_session.gd")
 const RngScript := preload("res://scripts/services/rng_service.gd")
+
+## 街の操作（FLW-004）。施設は FACILITY へ、出発は DEPARTURE へ、メニューは MENU へ、セーブは SAVE へ遷移し、タイトルへは TITLE へ戻る。
+const TOWN_FACILITIES: Array[StringName] = [&"guild", &"temple", &"shop", &"inn", &"tavern"]
+const TOWN_DEPARTURE := &"departure"
+const TOWN_MENU := &"menu"
+const TOWN_SAVE := &"save"
+const TOWN_TITLE := &"title"
+## 登録者が0人の間も使える街の操作（TWN-112）。
+const TOWN_ALWAYS_AVAILABLE: Array[StringName] = [&"guild", &"title"]
+## サービスの結果の形（ARC-400）。街の操作の可否と実行が返す。
+const ERROR_LOCKED := &"LOCKED"
+const ERROR_INVALID_TARGET := &"INVALID_TARGET"
+
+## 「戻る」を持つ状態。仮画面（PRS-208）と設定。NEW_GAME は導入の画面で、戻る操作を持たない（FLW-002）。
+const PLACEHOLDER_STATES: Array[State] = [
+	State.LOAD, State.SETTINGS, State.FACILITY, State.DEPARTURE, State.MENU, State.SAVE,
+]
 
 ## 設定ファイルの区画とキー（PRS-405）。
 const SETTINGS_SECTION := "settings"
@@ -51,8 +70,10 @@ var state: State = State.BOOT
 var master_volume: int = DEFAULT_MASTER_VOLUME
 var fullscreen: bool = false
 
-## 進行中のセッション（ARC-202）。`new_game()` が作る。TITLEの間は存在しない（FLW-108）。
+## 進行中のセッション（ARC-202）。`new_game()` が作る。TITLEへ戻る遷移で破棄するため、TITLEの間は存在しない（FLW-108, ARC-203）。
 var session: RefCounted = null
+## FACILITY で開いている施設（`TOWN_FACILITIES` のどれか）。FACILITY以外では空（FLW-005）。
+var facility: StringName = &""
 
 ## テスト用の注入点（TST-106, TST-107）。
 ## 終了要求。空の Callable の場合は `SceneTree.quit()` を呼ぶ。
@@ -191,22 +212,78 @@ func has_session() -> bool:
 
 # --- TITLE の操作 ---
 
-## 「はじめから」。既存のセーブスロットには触れない（FLW-002, SAV-003）。
-func request_new_game() -> bool:
-	return _leave_title(State.NEW_GAME)
-
-
-## NEW_GAME でセッションを初期化し、保持する（FLW-002, ARC-301）。成功したら true。
-## NEW_GAME 以外の状態、または初期化に失敗した場合は、何も変えず false。状態の遷移と画面は呼び出し側が行う。
+## 「はじめから」。セッションを初期化して保持し、NEW_GAME へ遷移する（FLW-002, ARC-301）。成功したら true。
+## セッションは、導入を表示する前に作る（FLW-002）。TITLE 以外の状態、入力の遮断中、初期化に失敗した場合は、何も変えず false
+## （失敗したときは TITLE に留まる）。既存のセーブスロットには触れない（SAV-003）。
 func new_game() -> bool:
-	if state != State.NEW_GAME or database == null:
+	if is_input_blocked() or state != State.TITLE or database == null:
 		return false
 	var rng: RefCounted = rng_service if rng_service != null else RngScript.new()
 	var created: RefCounted = SessionScript.create_new(database, rng)
 	if created == null:
 		return false
 	session = created
+	_return_state = State.TITLE
+	_change_state(State.NEW_GAME)
 	return true
+
+
+## 導入の決定で TOWN へ進む（FLW-002, FLW-004）。NEW_GAME 以外の状態、入力の遮断中は何も変えず false。
+func go_town() -> bool:
+	if is_input_blocked() or state != State.NEW_GAME or session == null:
+		return false
+	_change_state(State.TOWN)
+	return true
+
+
+## 街の「タイトルへ」。セッションを破棄して TITLE へ戻る（FLW-108, ARC-203, TWN-112）。未保存の確認は段階Dで加える（FLW-300）。
+## TOWN 以外の状態、入力の遮断中は何も変えず false。
+func return_title() -> bool:
+	if is_input_blocked() or state != State.TOWN:
+		return false
+	_change_state(State.TITLE)
+	return true
+
+
+# --- TOWN の操作 ---
+
+## 登録者が0人で、街の操作が制限されているか（TWN-110, TWN-111）。ニューゲーム直後と、最後の登録者を削除した後に true。
+## 画面は、案内文の表示とボタンの無効化に、この結果だけを用いる（FLW-204）。
+func is_town_restricted() -> bool:
+	return session == null or session.characters.is_empty()
+
+
+## 街の操作 `action`（ギルド・教会・商店・宿屋・酒場の `guild` `temple` `shop` `inn` `tavern`、`departure`、`menu`、`save`、`title`）が、
+## 規則の上で選べるかを返す。状態と入力の遮断は見ない。画面は、選択不可の表示（PRS-305）にこの結果を用いる。
+## `{ok, error_code, changes}`（ARC-400）。選べないときの `error_code` は `LOCKED`（TWN-110, TWN-112, FLW-110）、街にない操作は `INVALID_TARGET`。
+func check_town_action(action: StringName) -> Dictionary:
+	if action not in TOWN_FACILITIES and action not in [TOWN_DEPARTURE, TOWN_MENU, TOWN_SAVE, TOWN_TITLE]:
+		return _result(false, ERROR_INVALID_TARGET)
+	if is_town_restricted() and action not in TOWN_ALWAYS_AVAILABLE:
+		return _result(false, ERROR_LOCKED)
+	return _result(true)
+
+
+## 街の操作を、選べる場合に限って行う。結果の形は `check_town_action()` と同じ（ARC-400）。失敗したときは何も変えない（ARC-403）。
+## TOWN 以外の状態と、入力の遮断中は、街の操作ができない（FLW-204）ため `LOCKED`。遷移先が未実装の画面は、仮画面を開く（PRS-208）。
+func select_town_action(action: StringName) -> Dictionary:
+	if state != State.TOWN or is_input_blocked():
+		return _result(false, ERROR_LOCKED)
+	var result := check_town_action(action)
+	if not result.ok:
+		return result
+	if action in TOWN_FACILITIES:
+		facility = action
+		_open_from_town(State.FACILITY)
+	elif action == TOWN_DEPARTURE:
+		_open_from_town(State.DEPARTURE)
+	elif action == TOWN_MENU:
+		_open_from_town(State.MENU)
+	elif action == TOWN_SAVE:
+		_open_from_town(State.SAVE)
+	else:
+		return_title()
+	return result
 
 
 ## 「つづきから」。ロードはTITLEからのみ開ける（FLW-102）。
@@ -233,7 +310,7 @@ func quit_app() -> void:
 
 ## 仮画面や設定の「戻る」。記録した呼び出し元の状態へ戻る（PRS-208, FLW-113）。
 func go_back() -> bool:
-	if is_input_blocked() or state not in [State.NEW_GAME, State.LOAD, State.SETTINGS]:
+	if is_input_blocked() or state not in PLACEHOLDER_STATES:
 		return false
 	_change_state(_return_state)
 	return true
@@ -266,7 +343,23 @@ func _leave_title(next: State) -> bool:
 	return true
 
 
+## 街から `next` を開く。戻ると TOWN へ帰る。
+func _open_from_town(next: State) -> void:
+	_return_state = State.TOWN
+	_change_state(next)
+
+
+## 状態を変えて通知する。TITLE へ戻る遷移では、進行中のセッションを破棄する（FLW-108, ARC-203）。
+## FACILITY を離れるときは、開いていた施設を忘れる。
 func _change_state(next: State) -> void:
 	var old := state
 	state = next
+	if next == State.TITLE:
+		session = null
+	if next != State.FACILITY:
+		facility = &""
 	state_changed.emit(next, old)
+
+
+func _result(ok: bool, error_code: StringName = &"") -> Dictionary:
+	return {"ok": ok, "error_code": error_code, "changes": {}}
