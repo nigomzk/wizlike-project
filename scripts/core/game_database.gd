@@ -5,8 +5,9 @@ extends Node
 ## Autoload として登録するため、`class_name` を付けない（Autoload名と衝突する）。
 ## 定義は固定の値として扱い、戦闘中のHPなどの可変の値は書き込まない（DAT-002）。
 ##
-## 検査するのは、各CSVの件数（DAT-901）と参照先IDの存在（DAT-902）、および定義を作るために必要な
-## 列と数値の書式まで。料金・確率・組み合わせなどの検査（DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-908, DAT-909）は game_validator.gd で行う。
+## ここで検査するのは、各CSVの件数（DAT-901）と参照先IDの存在（DAT-902）、および定義を作るために必要な
+## 列と数値の書式まで。料金・確率・組み合わせなどの検査（DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-909, DAT-225）は
+## game_validator.gd が行い、`load_and_validate()` から呼ぶ。問題のログ出力は、どちらの検査も `_fail()` に集める（DAT-908）。
 
 const DEFAULT_DATA_DIR := "res://data"
 const MANIFEST_FILE := "manifest.csv"
@@ -20,6 +21,9 @@ const PORTRAIT_DIR := "res://assets/portraits"
 const FLOOR_SCENE_DIR := "res://scenes/floors"
 ## DAT-230
 const QUEST_TEXT_PREFIX := "quest_"
+
+## 検査は game_validator.gd。新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、`preload` で読む
+const Validator := preload("res://scripts/core/game_validator.gd")
 
 const LIST_DELIMITER := "|"
 
@@ -116,7 +120,7 @@ var _texts: Dictionary = {}
 var _texture_cache: Dictionary = {}
 
 
-## 全CSVを読み込み、件数と参照を検査する（DAT-901, DAT-902）。成功すれば true。
+## 全CSVを読み込み、件数・参照・値・組み合わせ・文章を検査する（DAT-901, DAT-902, DAT-903, DAT-904, DAT-905, DAT-906, DAT-907, DAT-908, DAT-909）。成功すれば true。
 ## `data_dir` は読込元（TST-108）。`log_sink` は問題1件ごとに `Callable(line: String)` で呼ばれる。
 ## 指定がなければ `push_error` へ出力する（DAT-908）。
 func load_and_validate(data_dir := DEFAULT_DATA_DIR, log_sink := Callable()) -> bool:
@@ -133,6 +137,8 @@ func load_and_validate(data_dir := DEFAULT_DATA_DIR, log_sink := Callable()) -> 
 	_build_definitions(tables)
 	_derive_fields()
 	_check_references(tables)
+	for problem in Validator.new().validate(self, tables):
+		_fail(problem["file"], problem["id"], problem["message"])
 
 	_loaded = errors.is_empty()
 	return _loaded
