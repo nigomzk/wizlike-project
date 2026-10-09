@@ -17,7 +17,7 @@ const MISSING_BACKGROUND := "res://assets/backgrounds/no_such_screen.png"
 const TEXT_SCREEN_SCENE := "res://scenes/ui/text_screen.tscn"
 const TOWN_SCENE := "res://scenes/ui/town.tscn"
 const TOWN_BACKGROUND := "res://assets/backgrounds/town.png"
-const CHARACTER_SCRIPT := "res://scripts/models/character_state.gd"
+const FACILITY_SCRIPT := "res://scripts/services/facility_service.gd"
 ## 街の項目（town.md §2）。表示名の順と、GameFlow へ送る操作（FLW-004）
 const TOWN_ITEMS := ["ギルド", "教会", "商店", "宿屋", "酒場", "ダンジョンへ", "メニュー", "セーブ", "タイトルへ"]
 const TOWN_ACTIONS: Array[StringName] = [&"guild", &"temple", &"shop", &"inn", &"tavern", &"departure", &"menu", &"save", &"title"]
@@ -774,12 +774,11 @@ func _fl09(t) -> void:
 
 
 # FL08: 登録者を作成した後、TOWNから「タイトルへ」を選び、再度「はじめから」を選ぶ（FLW-002, FLW-004, FLW-108, FLW-110, FLW-204, TWN-110, TWN-111, TWN-112, PRS-205, PRS-208, PRS-503, ARC-202, ARC-203）。
-# 登録（ギルド）は #10 で実装するため、登録者はテストが直接セッションへ入れる。「登録を含む部分」は成功にせずスキップのまま残す（TST-411）。
-# 確かめるのは、NEW_GAMEでのセッションの作成、導入文から街への遷移、登録前の制限、タイトルへ戻るときの破棄、再度の「はじめから」で別のセッションになること。
+# 登録は `FacilityService` で行う（ARC-302）。最後の登録者の削除は、削除を実装する Issue まで、テストが直接セッションから取り除く。
+# 確かめるのは、NEW_GAMEでのセッションの作成、導入文から街への遷移、登録前の制限と登録による解除、タイトルへ戻るときの破棄、再度の「はじめから」で別のセッションになること。
 func _fl08(t) -> void:
 	_fl08_game_flow(t)
 	await _fl08_screens(t)
-	t.skip("FL08", "ギルドでの登録（#10）を含む部分は判定していない。登録を含まない部分（セッションの作成と破棄、街の制限、画面）だけを確かめた")
 
 
 ## GameFlow だけで、セッションの作成と破棄、街の項目の可否と遷移を確かめる（FLW-002, FLW-108, FLW-110, FLW-204, TWN-110, TWN-111, TWN-112, ARC-203）。
@@ -883,9 +882,11 @@ func _fl08_game_flow(t) -> void:
 	t.check("FL08", true, flow.session == first)
 
 	# 登録者が1人以上になると、すべて選べる。各項目の遷移先と、戻るで TOWN へ戻ること（TWN-111, FLW-110）
-	var character = load(CHARACTER_SCRIPT).new()
-	character.id = 1
-	first.characters.append(character)
+	var service = load(FACILITY_SCRIPT).new(db)
+	t.check("FL08", false, service.register(first, "", &"warrior", "portrait_01").ok)
+	t.check("FL08", true, flow.is_town_restricted())
+	t.check("FL08", true, service.register(first, "アリス", &"warrior", "portrait_01").ok)
+	t.check("FL08", 1, first.characters.size())
 	t.check("FL08", false, flow.is_town_restricted())
 	var destinations := {
 		&"guild": s.FACILITY, &"temple": s.FACILITY, &"shop": s.FACILITY, &"inn": s.FACILITY, &"tavern": s.FACILITY,
@@ -912,11 +913,13 @@ func _fl08_game_flow(t) -> void:
 	flow.unblock_input(&"modal")
 	# 最後の登録者を削除すると、再び制限される（TWN-111）
 	first.characters.clear()
+	first.party_ids.clear()
 	t.check("FL08", true, flow.is_town_restricted())
 	t.check("FL08", false, flow.check_town_action(&"menu").ok)
 
-	# セッションの状態を変えてから「タイトルへ」。セッションを破棄する（FLW-108, ARC-203）
-	first.characters.append(character)
+	# 登録し直して、セッションの状態を変えてから「タイトルへ」。セッションを破棄する（FLW-108, ARC-203）。IDは再利用しない（GLS-403）
+	t.check("FL08", true, service.register(first, "ボブ", &"mage", "portrait_02").ok)
+	t.check("FL08", 2, first.characters[0].id)
 	first.gold += 100
 	first.day = 4
 	first.dirty = true
@@ -1091,10 +1094,8 @@ func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: 
 	t.check("FL08", TOWN_SCENE, screen.scene_file_path)
 
 	# セッションの変更の通知で、表示を更新する（ARC-205）。登録者が1人入ると、案内文が消えて、すべて選べる
-	var character = load(CHARACTER_SCRIPT).new()
-	character.id = 1
-	flow.session.characters.append(character)
-	flow.session.notify_changed(&"characters")
+	var service = load(FACILITY_SCRIPT).new(flow.database)
+	t.check("FL08", true, service.register(flow.session, "アリス", &"warrior", "portrait_01").ok)
 	buttons = _buttons(screen)
 	t.check("FL08", TOWN_ITEMS, buttons.map(func(b): return b.text))
 	t.check("FL08", [false, false, false, false, false, false, false, false, false], buttons.map(func(b): return b.disabled))
@@ -1122,6 +1123,7 @@ func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: 
 
 	# 登録者を削除すると、再び制限して案内文を出す（TWN-111）
 	flow.session.characters.clear()
+	flow.session.party_ids.clear()
 	flow.session.notify_changed(&"characters")
 	t.check("FL08", true, _shown_label_texts(host.current_screen).has(guide))
 	t.check("FL08", expected_text, _buttons(host.current_screen).map(func(b): return b.text))
