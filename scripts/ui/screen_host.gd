@@ -15,8 +15,16 @@ const SCREEN_SCENES := {
 	GameFlowScript.State.SETTINGS: "res://scenes/ui/settings.tscn",
 }
 
+## 施設 -> 画面シーン。FACILITY の状態は、開いている施設（`GameFlow.facility`）で画面が決まる。画面のない施設は仮画面を出す（PRS-208）。
+## 施設の画面を実装するIssueが、ここへ行を足す。
+const FACILITY_SCENES := {
+	&"guild": "res://scenes/ui/guild.tscn",
+}
+
 ## 現在表示している画面
 var current_screen: Control = null
+## 確認ダイアログなどのモーダルを置く先。`main.tscn` の ModalHost。無い構成では、この ScreenHost 自身（ARC-200, FLW-200）
+var modal_host: Node = null
 ## 入力の遮断中に、背景の画面へのマウスとキーを止める全面のControl
 var input_blocker: Control = null
 
@@ -34,6 +42,9 @@ func _ready() -> void:
 	# 遮断中のキーは、フォーカス移動へ回さずここで受け止める
 	input_blocker.gui_input.connect(func(_event: InputEvent): input_blocker.accept_event())
 	add_child(input_blocker)
+	modal_host = get_node_or_null("../ModalHost")
+	if modal_host == null:
+		modal_host = self
 	# 画面へ後から追加された項目にも、ツリーに入った時点で結ぶ（ARC-209）
 	get_tree().node_added.connect(_on_node_added)
 	if _flow == null:
@@ -61,7 +72,7 @@ func _show_screen(state: GameFlowScript.State) -> void:
 		remove_child(current_screen)
 		current_screen.queue_free()
 		current_screen = null
-	var packed := load(SCREEN_SCENES.get(state, PLACEHOLDER_SCENE)) as PackedScene
+	var packed := load(_scene_path(state)) as PackedScene
 	var screen = packed.instantiate()
 	screen.setup(_flow)
 	current_screen = screen
@@ -74,6 +85,12 @@ func _show_screen(state: GameFlowScript.State) -> void:
 		move_child(input_blocker, -1)
 	# `_ready` の中より、遅延させたほうが確実にフォーカスが付く
 	current_screen.call_deferred("grab_initial_focus")
+
+
+func _scene_path(state: GameFlowScript.State) -> String:
+	if state == GameFlowScript.State.FACILITY:
+		return FACILITY_SCENES.get(_flow.facility, PLACEHOLDER_SCENE)
+	return SCREEN_SCENES.get(state, PLACEHOLDER_SCENE)
 
 
 func _on_node_added(node: Node) -> void:

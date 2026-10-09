@@ -17,6 +17,7 @@ const MISSING_BACKGROUND := "res://assets/backgrounds/no_such_screen.png"
 const TEXT_SCREEN_SCENE := "res://scenes/ui/text_screen.tscn"
 const TOWN_SCENE := "res://scenes/ui/town.tscn"
 const TOWN_BACKGROUND := "res://assets/backgrounds/town.png"
+const GUILD_SCENE := "res://scenes/ui/guild.tscn"
 const FACILITY_SCRIPT := "res://scripts/services/facility_service.gd"
 ## 街の項目（town.md §2）。表示名の順と、GameFlow へ送る操作（FLW-004）
 const TOWN_ITEMS := ["ギルド", "教会", "商店", "宿屋", "酒場", "ダンジョンへ", "メニュー", "セーブ", "タイトルへ"]
@@ -1049,7 +1050,7 @@ func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: 
 	var screen: Control = host.current_screen
 	t.check("FL08", TOWN_SCENE, screen.scene_file_path)
 
-	# 背景は共通部品「画面背景」を最初の子に置く（PRS-607）。画像は #11 まで無く、あっても無くても同じ部品が扱う
+	# 背景は共通部品「画面背景」を最初の子に置く（PRS-607）。画像があっても無くても、同じ部品が扱う
 	var background: Control = screen.get_child(0)
 	t.check("FL08", BACKGROUND_SCENE, background.scene_file_path)
 	t.check("FL08", TOWN_BACKGROUND, background.texture_path)
@@ -1083,10 +1084,11 @@ func _fl08_town_screen(t, flow: Node, host: Control, guide: String, start_gold: 
 	_press(screen, "メニュー（不可）")
 	t.check("FL08", s.TOWN, flow.state)
 
-	# ギルドは仮画面へ。戻るで街へ戻る（PRS-208）
+	# ギルドはギルドの画面へ（仮画面ではない）。戻るで街へ戻る
 	_press(screen, "ギルド")
 	t.check("FL08", s.FACILITY, flow.state)
-	t.check("FL08", ["準備中"], _label_texts(host.current_screen))
+	t.check("FL08", GUILD_SCENE, host.current_screen.scene_file_path)
+	t.check("FL08", false, _label_texts(host.current_screen).has("準備中"))
 	_press(host.current_screen, "戻る")
 	t.check("FL08", s.TOWN, flow.state)
 	await t.process_frame
