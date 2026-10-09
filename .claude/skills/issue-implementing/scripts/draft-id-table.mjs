@@ -377,7 +377,8 @@ function check(args) {
     const body = readFileSync(args.prBody, "utf8");
     const abbreviated = [...body.matchAll(/[A-Z]{3}-\d{3}(?:\s*[,、]\s*\d{3}(?!\d)|〜)/g)].map((m) => m[0]);
     for (const a of abbreviated) errors.push(`IDの省略表記がある: ${a}`);
-    const outside = body.replace(/## 対応した規則ID[\s\S]*?(?=\n## )/, "");
+    // 壊してはいけないものの折りたたんだ表は対象外。要約に規則IDが入っていても、参照のみの表に載せない（PR本文を長くしない）
+    const outside = body.replace(/<summary>壊してはいけない[\s\S]*?<\/details>/, "").replace(/## 対応した規則ID[\s\S]*?(?=\n## )/, "");
     for (const m of outside.matchAll(/[A-Z]{3}-\d{3}/g)) if (!tableIds.has(m[0])) errors.push(`本文に現れるIDが「対応した規則ID」の表にない: ${m[0]}`);
   }
   const unique = [...new Set(errors)];
