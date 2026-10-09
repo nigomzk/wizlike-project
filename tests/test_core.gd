@@ -6,10 +6,27 @@ const IDS := ["A01", "A02", "A03", "A04", "A05", "A06", "A07"]
 const MAIN_SCENE := "res://scenes/main.tscn"
 ## 新しい `class_name` をクラスキャッシュ（`.godot/`）の更新に頼らず参照するため、実行時に `load` で読む
 const RNG_SERVICE_SCRIPT := "res://scripts/services/rng_service.gd"
+const FACILITY_SCRIPT := "res://scripts/services/facility_service.gd"
+const SESSION_SCRIPT := "res://scripts/core/game_session.gd"
+const DB_SCRIPT := "res://scripts/core/game_database.gd"
+const GAME_FLOW_SCRIPT := "res://scripts/core/game_flow.gd"
+const RULES_SCRIPT := "res://scripts/rules/inventory_rules.gd"
+const DATA_DIR := "res://data"
 ## GLS-200: 乱数の系列
 const RNG_SERIES: Array[StringName] = [&"encounter", &"battle", &"loot", &"creation"]
 ## A02 が系列ごとに注入する seed。系列で異なる値にする
 const RNG_SEEDS := {&"encounter": 1001, &"battle": 2002, &"loot": 3003, &"creation": 4004}
+## A03, A04, A05 が注入する seed。A02 とは別の値にする
+const GROWTH_SEEDS := {&"encounter": 5005, &"battle": 6006, &"loot": 7007, &"creation": 8008}
+## ARC-401: エラーコードは、この11個に限る
+const ERROR_CODES: Array[StringName] = [
+	&"NO_GOLD", &"NO_SPACE", &"INVALID_TARGET", &"PARTY_EMPTY", &"PARTY_FULL", &"ROSTER_FULL",
+	&"INVALID_NAME", &"NO_LIVING_MEMBER", &"ALREADY_LEARNED", &"LOCKED", &"INVALID_SAVE",
+]
+## ARC-400: サービスの結果のキー（並べ替えた順）
+const RESULT_KEYS := ["changes", "error_code", "ok"]
+## A03 が GameFlow に渡す、設定とスロットの一時的な置き場所（TST-107）
+const A03_TMP_ROOT := "user://test_core_a03"
 const ALLOWED_AUTOLOADS := ["GameDatabase", "SaveService"]
 const GAME_THEME := "res://scenes/ui/components/game_theme.tres"
 const SCENES_DIR := "res://scenes"
@@ -54,6 +71,9 @@ class EngineErrorCounter extends Logger:
 func run(t) -> void:
 	_a01(t)
 	_a02(t)
+	_a03(t)
+	_a04(t)
+	_a05(t)
 	_a06(t)
 	await _a07(t)
 
@@ -175,6 +195,232 @@ func _a02(t) -> void:
 ## 系列から、種類の違う引き方で数回引いた値の列。
 func _draw(rng: RandomNumberGenerator) -> Array:
 	return [rng.randi(), rng.randf(), rng.randi_range(0, 5), rng.randi(), rng.randf()]
+
+
+# A03: ある系列から引く。画面の開閉、一覧の操作、冒険者作成の途中キャンセルを行う（GLS-200, GLS-202, GLS-203, PTY-007）
+func _a03(t) -> void:
+	# 引いた系列以外のstateは変わらない
+	for drawn in RNG_SERIES:
+		var series_rng = load(RNG_SERVICE_SCRIPT).new()
+		series_rng.seed_all(GROWTH_SEEDS)
+		var before := _states(series_rng)
+		series_rng.series(drawn).randi()
+		var after := _states(series_rng)
+		for id in RNG_SERIES:
+			t.check("A03", id == drawn, before[id] != after[id])
+
+	# 画面の開閉、一覧の操作、冒険者作成の途中キャンセルでは、どの系列のstateも変わらない
+	var db = load(DB_SCRIPT).new()
+	t.check("A03", true, db.load_and_validate(DATA_DIR, func(_line: String) -> void: pass))
+	var flow: Node = load(GAME_FLOW_SCRIPT).new()
+	flow.save_dir = A03_TMP_ROOT + "/saves"
+	flow.settings_path = A03_TMP_ROOT + "/settings.cfg"
+	flow.fullscreen_handler = func(_on: bool) -> void: pass
+	flow.database = db
+	var rng = load(RNG_SERVICE_SCRIPT).new()
+	rng.seed_all(GROWTH_SEEDS)
+	flow.rng_service = rng
+	t.root.add_child(flow)
+	var initial := _states(rng)
+	t.check("A03", true, flow.new_game())
+	t.check("A03", true, flow.go_town())
+	var service = load(FACILITY_SCRIPT).new(db)
+	var session = flow.session
+
+	# 登録者0人の街：選べない項目の確認と選択を試し、ギルドを開いて閉じる
+	for action in [&"guild", &"temple", &"shop", &"inn", &"tavern", &"departure", &"menu", &"save", &"title", &"no_such_action"]:
+		flow.check_town_action(action)
+	for action in [&"temple", &"menu", &"save", &"departure"]:
+		flow.select_town_action(action)
+	t.check("A03", true, flow.select_town_action(&"guild").ok)
+	t.check("A03", true, flow.go_back())
+	# 作成の途中キャンセル：確定の前の検証だけを繰り返し、確定しない。入力の誤りで拒否された操作も含む
+	for raw in ["アリス", " ", "あ".repeat(13), "a\nb"]:
+		service.can_register(session, raw, &"warrior", "portrait_01")
+	t.check("A03", false, service.register(session, "", &"warrior", "portrait_01").ok)
+	t.check("A03", false, service.register(session, "あ", &"no_such_job", "portrait_01").ok)
+	t.check("A03", false, service.register(session, "あ", &"warrior", "no_such_portrait").ok)
+	t.check("A03", initial, _states(rng))
+	t.check("A03", 0, session.characters.size())
+	t.check("A03", 1, session.next_character_id)
+
+	# 確定した作成は、creation 系列から引く。ほかの系列は変わらない
+	var reference := RandomNumberGenerator.new()
+	reference.seed = GROWTH_SEEDS[&"creation"]
+	reference.randi()
+	t.check("A03", true, service.register(session, "アリス", &"warrior", "portrait_01").ok)
+	var after_register := _states(rng)
+	for id in RNG_SERIES:
+		if id == &"creation":
+			t.check("A03", reference.state, after_register[id])
+			t.check("A03", false, initial[id] == after_register[id])
+		else:
+			t.check("A03", initial[id], after_register[id])
+
+	# 登録後に、画面を開閉し、確認を繰り返し、20人まで埋めて拒否される操作を試みても、引かれない
+	for action in [&"guild", &"temple", &"shop", &"inn", &"tavern", &"departure", &"menu", &"save"]:
+		flow.check_town_action(action)
+		t.check("A03", true, flow.select_town_action(action).ok)
+		t.check("A03", true, flow.go_back())
+	t.check("A03", after_register, _states(rng))
+	for i in 19:
+		service.register(session, "冒険者%d" % i, &"mage", "portrait_02")
+	t.check("A03", 20, session.characters.size())
+	var full := _states(rng)
+	t.check("A03", false, service.register(session, "二十一人目", &"mage", "portrait_02").ok)
+	service.can_register(session, "二十一人目", &"mage", "portrait_02")
+	t.check("A03", full, _states(rng))
+
+	t.root.remove_child(flow)
+	flow.free()
+	db.free()
+	_remove_dir(A03_TMP_ROOT)
+
+
+# A04: 同じseedで冒険者を同じ順に作成する（GLS-201, GLS-204, PTY-006）
+func _a04(t) -> void:
+	var db = load(DB_SCRIPT).new()
+	t.check("A04", true, db.load_and_validate(DATA_DIR, func(_line: String) -> void: pass))
+	var jobs: Array[StringName] = [&"warrior", &"knight", &"mage", &"priest", &"scout"]
+	var runs: Array = []
+	for run_index in 2:
+		var rng = load(RNG_SERVICE_SCRIPT).new()
+		rng.seed_all(GROWTH_SEEDS)
+		var session = load(SESSION_SCRIPT).create_new(db, rng)
+		var service = load(FACILITY_SCRIPT).new(db)
+		var seeds: Array = []
+		var other_states := _states(rng)
+		other_states.erase(&"creation")
+		for i in jobs.size():
+			# 確定しない操作は引かない（GLS-204）。確定のときにだけ、1回引く
+			var creation_before: int = rng.series(&"creation").state
+			service.can_register(session, "あ", jobs[i], "portrait_01")
+			service.register(session, "", jobs[i], "portrait_01")
+			t.check("A04", creation_before, rng.series(&"creation").state)
+			t.check("A04", true, service.register(session, "冒険者%d" % i, jobs[i], "portrait_01").ok)
+			seeds.append(session.characters[i].growth_rng.seed)
+		# 引いたのは creation 系列だけで、ほかの系列は変わらない
+		var remaining := _states(rng)
+		remaining.erase(&"creation")
+		t.check("A04", other_states, remaining)
+		runs.append({"seeds": seeds, "creation": rng.series(&"creation").state})
+
+	# 2回の実行で、冒険者ごとの growth_rng の seed が一致する
+	t.check("A04", runs[0].seeds, runs[1].seeds)
+	t.check("A04", runs[0].creation, runs[1].creation)
+	# seed は、creation 系列から確定のたびに1回ずつ引いた値（`randi()` を1回）。冒険者ごとに別の値になる
+	var reference := RandomNumberGenerator.new()
+	reference.seed = GROWTH_SEEDS[&"creation"]
+	var expected: Array = []
+	for i in jobs.size():
+		expected.append(reference.randi())
+	t.check("A04", expected, runs[0].seeds)
+	t.check("A04", reference.state, runs[0].creation)
+	var unique := {}
+	for value in runs[0].seeds:
+		unique[value] = true
+	t.check("A04", jobs.size(), unique.size())
+
+	# 冒険者ごとに独立している。一方から引いても、他方の続きは変わらない
+	var rng2 = load(RNG_SERVICE_SCRIPT).new()
+	rng2.seed_all(GROWTH_SEEDS)
+	var session2 = load(SESSION_SCRIPT).create_new(db, rng2)
+	var service2 = load(FACILITY_SCRIPT).new(db)
+	service2.register(session2, "A", &"warrior", "portrait_01")
+	service2.register(session2, "B", &"warrior", "portrait_01")
+	var first_rng: RandomNumberGenerator = session2.characters[0].growth_rng
+	var second_rng: RandomNumberGenerator = session2.characters[1].growth_rng
+	var plain := RandomNumberGenerator.new()
+	plain.seed = second_rng.seed
+	var untouched_state: int = second_rng.state
+	first_rng.randi()
+	first_rng.randi()
+	t.check("A04", untouched_state, second_rng.state)
+	t.check("A04", plain.randi(), second_rng.randi())
+
+	db.free()
+
+
+# A05: ARC-401の全エラーコードとサービスの戻り値を確認する（ARC-400, ARC-401, ARC-402）
+func _a05(t) -> void:
+	var db = load(DB_SCRIPT).new()
+	t.check("A05", true, db.load_and_validate(DATA_DIR, func(_line: String) -> void: pass))
+
+	# 全コードについて、`error_` + 小文字のIDの文章がある。サービスは表示文言を持たない（ARC-402）
+	t.check("A05", 11, ERROR_CODES.size())
+	for code in ERROR_CODES:
+		var text_id := StringName("error_" + String(code).to_lower())
+		t.check("A05", true, db.has_text(text_id))
+		t.check("A05", false, db.text(text_id) == "" or db.text(text_id) == String(text_id))
+	# 名前の誤りの文言は、文字数の範囲を埋め込む
+	var invalid_name: String = db.text(&"error_invalid_name", {"min": 1, "max": 12})
+	t.check("A05", true, invalid_name.contains("1") and invalid_name.contains("12") and not invalid_name.contains("{"))
+
+	# サービスの戻り値は `{ok, error_code, changes}` の形。成功は空の `error_code`、失敗は ARC-401 のコード
+	var rng = load(RNG_SERVICE_SCRIPT).new()
+	rng.seed_all(GROWTH_SEEDS)
+	var session = load(SESSION_SCRIPT).create_new(db, rng)
+	var service = load(FACILITY_SCRIPT).new(db)
+	var rules = load(RULES_SCRIPT)
+	var results: Array = []
+	# FacilityService：成功、名前、職業と顔画像、上限
+	results.append(service.can_register(session, "アリス", &"warrior", "portrait_01"))
+	results.append(service.register(session, "アリス", &"warrior", "portrait_01"))
+	results.append(service.can_register(session, "", &"warrior", "portrait_01"))
+	results.append(service.register(session, "", &"warrior", "portrait_01"))
+	results.append(service.register(session, "アリス", &"no_such_job", "portrait_01"))
+	results.append(service.register(session, "アリス", &"warrior", "portrait_99"))
+	for i in 19:
+		results.append(service.register(session, "冒険者%d" % i, &"mage", "portrait_02"))
+	results.append(service.register(session, "二十一人目", &"mage", "portrait_02"))
+	results.append(service.can_register(session, "二十一人目", &"mage", "portrait_02"))
+	# InventoryRules：成功、容量の不足、所持していない品の削除、存在しない品の装備
+	var herb := ItemStackDef.new()
+	herb.item_id = &"herb"
+	herb.quantity = 1
+	var heap := ItemStackDef.new()
+	heap.item_id = &"herb"
+	heap.quantity = 9 * 31
+	results.append(rules.plan_transaction(db, session.inventory, [herb], []))
+	results.append(rules.plan_transaction(db, session.inventory, [heap], []))
+	results.append(rules.plan_transaction(db, session.inventory, [], [heap]))
+	results.append(rules.plan_equip(db, session.inventory, session.characters[0], &"weapon", &"no_such_item"))
+	# GameFlow：街の操作の可否と選択
+	var flow: Node = load(GAME_FLOW_SCRIPT).new()
+	flow.database = db
+	flow.rng_service = rng
+	results.append(flow.check_town_action(&"guild"))
+	results.append(flow.check_town_action(&"no_such_action"))
+	results.append(flow.select_town_action(&"guild"))
+	flow.free()
+
+	var codes_seen := {}
+	for result in results:
+		var keys: Array = result.keys()
+		keys.sort()
+		t.check("A05", RESULT_KEYS, keys)
+		t.check("A05", TYPE_BOOL, typeof(result.ok))
+		t.check("A05", TYPE_STRING_NAME, typeof(result.error_code))
+		t.check("A05", TYPE_DICTIONARY, typeof(result.changes))
+		if result.ok:
+			t.check("A05", &"", result.error_code)
+		else:
+			t.check("A05", true, ERROR_CODES.has(result.error_code))
+			t.check("A05", {}, result.changes)
+			codes_seen[result.error_code] = true
+	# 上の操作で、主要なコードを実際に返している（形だけの検査で終わらせない）
+	for code in [&"INVALID_NAME", &"INVALID_TARGET", &"ROSTER_FULL", &"NO_SPACE", &"LOCKED"]:
+		t.check("A05", true, codes_seen.has(code))
+
+	db.free()
+
+
+## 4系列それぞれの state。系列を消費したかどうかの比較に使う。
+func _states(rng) -> Dictionary:
+	var states := {}
+	for id in RNG_SERIES:
+		states[id] = rng.series(id).state
+	return states
 
 
 # A06: 画面のシーンとスクリプトが、見た目を共通Theme と Type Variation だけで決めている（ARC-208, PRS-300）
