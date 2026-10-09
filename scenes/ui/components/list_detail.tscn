@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/components/list_detail.gd" id="1_list"]
+
+[node name="ListDetail" type="VBoxContainer"]
+script = ExtResource("1_list")
+
+[node name="Heading" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+
+[node name="Columns" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ListPanel" type="PanelContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+
+[node name="Inner" type="PanelContainer" parent="Columns/ListPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Scroll" type="ScrollContainer" parent="Columns/ListPanel/Inner"]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="Items" type="VBoxContainer" parent="Columns/ListPanel/Inner/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DetailPanel" type="PanelContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Inner" type="PanelContainer" parent="Columns/DetailPanel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Detail" type="VBoxContainer" parent="Columns/DetailPanel/Inner"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Bottom" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Actions" type="HBoxContainer" parent="Bottom"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Back" type="Button" parent="Bottom"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "戻る"

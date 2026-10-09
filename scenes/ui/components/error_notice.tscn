@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/components/error_notice.gd" id="1_notice"]
+
+[node name="ErrorNotice" type="Label"]
+mouse_filter = 2
+theme_type_variation = &"NoteLabel"
+autowrap_mode = 3
+script = ExtResource("1_notice")
