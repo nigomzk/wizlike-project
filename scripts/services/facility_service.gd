@@ -71,19 +71,34 @@ static func is_portrait_id(portrait_id: String) -> bool:
 	return false
 
 
+## 登録を始められるか。登録者の上限だけを、何も変えずに確かめる（PTY-012）。名前などを決める前の、画面の入口の可否に使う。乱数も引かない（GLS-203）。
+## 失敗は `ROSTER_FULL`。
+func can_start_register(session) -> Dictionary:
+	if session.characters.size() >= ROSTER_LIMIT:
+		return _failure(ROSTER_FULL)
+	return _success({})
+
+
+## 名前だけを、何も変えずに確かめる（PTY-003）。作成の最初の手順で、職業と顔の前に確かめる。
+## 成功の `changes` は `{name}`（前後の空白を除いた名前）。失敗は `INVALID_NAME`。
+func can_name(raw_name: String) -> Dictionary:
+	var normalized := normalize_name(raw_name)
+	if not is_valid_name(normalized):
+		return _failure(INVALID_NAME)
+	return _success({"name": normalized})
+
+
 ## 登録できるかを、何も変えずに確かめる。作成の途中の確認にも使う（PTY-007）。乱数も引かない（GLS-203）。
 ## 成功の `changes` は `{name}`（前後の空白を除いた名前）。
 ## 失敗は、上限が `ROSTER_FULL`（PTY-012）、職業と顔画像の不明が `INVALID_TARGET`、名前の誤りが `INVALID_NAME`（PTY-003）。
 ## 複数に当たるときは、この順で最初のものを返す。
 func can_register(session, raw_name: String, job_id: StringName, portrait_id: String) -> Dictionary:
-	if session.characters.size() >= ROSTER_LIMIT:
-		return _failure(ROSTER_FULL)
+	var entry := can_start_register(session)
+	if not entry.ok:
+		return entry
 	if _db.job(job_id) == null or not is_portrait_id(portrait_id):
 		return _failure(INVALID_TARGET)
-	var normalized := normalize_name(raw_name)
-	if not is_valid_name(normalized):
-		return _failure(INVALID_NAME)
-	return _success({"name": normalized})
+	return can_name(raw_name)
 
 
 ## 冒険者を1人登録する。確定の直前に条件を確かめ、成功したときだけ一括で反映する（TWN-100, TWN-101）。
