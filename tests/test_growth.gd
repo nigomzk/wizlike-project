@@ -247,10 +247,14 @@ func _p01(t) -> void:
 		var preview: Dictionary = service.can_register(session, raw, job, _portrait(0))
 		t.check("P01", true, preview.ok)
 		t.check("P01", &"", preview.error_code)
+		# 試算は、登録後の行き先（パーティか待機。PTY-013）と費用（無料。PTY-000）も返す。確定した結果と一致する
+		var party_before: int = session.party_ids.size()
+		t.check("P01", {"name": expected, "joined_party": party_before < PARTY_LIMIT, "cost": 0}, preview.changes)
 		# 試算は何も変えない
 		t.check("P01", registered, session.characters.size())
 		var result: Dictionary = service.register(session, raw, job, _portrait(0))
 		t.check("P01", true, result.ok)
+		t.check("P01", preview.changes.joined_party, result.changes.joined_party)
 		t.check("P01", expected, session.characters.back().name)
 		registered += 1
 	t.check("P01", accepted.size(), session.characters.size())

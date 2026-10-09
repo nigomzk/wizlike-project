@@ -17,19 +17,18 @@ const TEXT_JOB_HEADING := "職業を選ぶ"
 const TEXT_NAME_PROMPT := "名前（%d〜%d文字）"
 const TEXT_INITIAL_SKILL := "初期スキル"
 const TEXT_PORTRAIT := "顔%d"
-## 確認ダイアログの「確定で変更される項目と費用」（TWN-102）。登録は無料（PTY-000）。
+## 確認ダイアログの「確定で変更される項目と費用」（TWN-102）。行き先と費用は、サービスの試算の結果を表示する。
 const TEXT_DETAIL_NAME := "名前：%s"
 const TEXT_DETAIL_JOB := "職業：%s"
 const TEXT_DETAIL_PORTRAIT := "顔：%s"
-const TEXT_DETAIL_JOIN := "登録後：パーティの%d番目に加わる"
+const TEXT_DETAIL_JOIN := "登録後：パーティに加わる"
 const TEXT_DETAIL_WAIT := "登録後：待機者になる"
 const TEXT_DETAIL_COST := "費用：%dG"
-const REGISTER_COST := 0
 const PORTRAIT_BUTTON_SIZE := Vector2(104, 104)
 
 ## 登録以外の操作（guild.md §3.2）。別のIssueで作るまで「準備中」を出す。
 const PENDING_ACTIONS: Array[String] = ["編成", "名前と顔の変更", "削除", "訓練場"]
-const REGISTER_LABEL := "登録する"
+const REGISTER_LABEL := "登録"
 
 enum View { MAIN, NAME, JOB, PORTRAIT, PENDING }
 
@@ -274,21 +273,19 @@ func _ask_confirm() -> void:
 		return
 	_confirming = true
 	var message: String = _flow.database.text(&"guild_register_confirm", {"name": result.changes.name})
-	var dialog: Control = ConfirmDialog.open(_modal_host(), _flow, message, _confirm_details(result.changes.name))
+	var dialog: Control = ConfirmDialog.open(_modal_host(), _flow, message, _confirm_details(result.changes))
 	dialog.answered.connect(_on_confirm_answered)
 
 
 ## 確定で変更される項目と費用（TWN-102）。
-func _confirm_details(registered_name: String) -> Array[String]:
+func _confirm_details(changes: Dictionary) -> Array[String]:
 	var job: JobDef = _flow.database.job(_draft_job)
-	var party_size: int = _session.party_ids.size()
-	var fate := TEXT_DETAIL_JOIN % (party_size + 1) if party_size < FacilityScript.PARTY_LIMIT else TEXT_DETAIL_WAIT
 	return [
-		TEXT_DETAIL_NAME % registered_name,
+		TEXT_DETAIL_NAME % changes.name,
 		TEXT_DETAIL_JOB % job.name,
 		TEXT_DETAIL_PORTRAIT % _draft_portrait.trim_prefix("portrait_"),
-		fate,
-		TEXT_DETAIL_COST % REGISTER_COST,
+		TEXT_DETAIL_JOIN if changes.joined_party else TEXT_DETAIL_WAIT,
+		TEXT_DETAIL_COST % changes.cost,
 	]
 
 

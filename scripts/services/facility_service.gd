@@ -19,6 +19,8 @@ const PARTY_LIMIT := 4
 ## 名前の文字数。前後の空白を除いた後で数える（PTY-003）
 const NAME_MIN := 1
 const NAME_MAX := 12
+## 登録の費用。無料（PTY-000）
+const REGISTER_COST := 0
 ## 顔画像は `portrait_01` 〜 `portrait_10` の10種（PTY-005, DAT-522）
 const PORTRAIT_COUNT := 10
 
@@ -89,7 +91,8 @@ func can_name(raw_name: String) -> Dictionary:
 
 
 ## 登録できるかを、何も変えずに確かめる。作成の途中の確認にも使う（PTY-007）。乱数も引かない（GLS-203）。
-## 成功の `changes` は `{name}`（前後の空白を除いた名前）。
+## 成功の `changes` は `{name, joined_party, cost}`。前後の空白を除いた名前、登録後にパーティへ加わるか（PTY-013）、費用（無料。PTY-000）。
+## `joined_party` は `register` の結果と同じ判定で、確定の前に、確認の表示へ使う（TWN-102）。
 ## 失敗は、上限が `ROSTER_FULL`（PTY-012）、職業と顔画像の不明が `INVALID_TARGET`、名前の誤りが `INVALID_NAME`（PTY-003）。
 ## 複数に当たるときは、この順で最初のものを返す。
 func can_register(session, raw_name: String, job_id: StringName, portrait_id: String) -> Dictionary:
@@ -98,7 +101,10 @@ func can_register(session, raw_name: String, job_id: StringName, portrait_id: St
 		return entry
 	if _db.job(job_id) == null or not is_portrait_id(portrait_id):
 		return _failure(INVALID_TARGET)
-	return can_name(raw_name)
+	var named := can_name(raw_name)
+	if not named.ok:
+		return named
+	return _success({"name": named.changes.name, "joined_party": session.party_ids.size() < PARTY_LIMIT, "cost": REGISTER_COST})
 
 
 ## 冒険者を1人登録する。確定の直前に条件を確かめ、成功したときだけ一括で反映する（TWN-100, TWN-101）。
@@ -129,7 +135,7 @@ func register(session, raw_name: String, job_id: StringName, portrait_id: String
 
 	session.characters.append(character)
 	session.next_character_id += 1
-	var joined_party: bool = session.party_ids.size() < PARTY_LIMIT
+	var joined_party: bool = checked.changes.joined_party
 	if joined_party:
 		session.party_ids.append(character.id)
 	session.notify_changed(CHANGE_ROSTER)
