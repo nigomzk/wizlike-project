@@ -210,9 +210,10 @@ function draft(args) {
   const automated = [...dod, ...keep].filter((id) => auto.has(id.replace(/\d+$/, "")));
   const manual = [...dod, ...keep].filter((id) => !auto.has(id.replace(/\d+$/, "")));
 
-  // 受入IDの根拠の規則ID
+  // 受入IDの根拠の規則ID。DoD のものだけを集める。壊してはいけないものの規則IDは、このPRで触っていない既存の規則への参照のため、
+  // 載せない（PR本文を長くしない）。受入IDの索引から引ける
   const accRules = new Map();
-  for (const id of automated) {
+  for (const id of automated.filter((x) => dod.has(x))) {
     const def = acceptances[id];
     const ids = def ? expandRuleIds(def.cells[def.cells.length - 1]).filter((x) => !x.ranged || rules[x.id]).map((x) => x.id) : [];
     accRules.set(id, [...new Set(ids)]);
@@ -243,18 +244,37 @@ function draft(args) {
   out.push("## 対応した規則ID", "");
   out.push("<details>", `<summary>仕様根拠（${spec.length}件）</summary>`, "", ...table(spec, "（差分に引用なし）"), "</details>", "");
   out.push("<details>", `<summary>参照のみ（${refOnly.length}件）</summary>`, "", ...table(refOnly, "（PR本文のみ）"), "</details>", "");
-  out.push("## 受入IDごとの結果", "");
-  out.push("| 受入ID | 区分 | 確認する内容（要約） | 検証する規則ID | 先に書いたとき（TDD） | 実装後 |");
-  out.push("| --- | --- | --- | --- | --- | --- |");
-  for (const id of automated) {
+  const content = (id) => {
     const def = acceptances[id];
-    const kind = dod.has(id) ? "DoD" : "壊してはいけない";
-    const content = def ? `${EXCERPT_MARK}${excerpt(def.cells.slice(0, -1))}` : "（設計書に存在しない）";
-    const ruleList = accRules.get(id).join(", ") || "（根拠なし）";
-    const first = kind === "DoD" ? logResult(red, id) : "—";
-    out.push(`| ${id} | ${kind} | ${content} | ${ruleList} | ${first} | ${logResult(latest, id)} |`);
+    return def ? `${EXCERPT_MARK}${excerpt(def.cells.slice(0, -1))}` : "（設計書に存在しない）";
+  };
+  const dodIds = automated.filter((id) => dod.has(id));
+  const keepIds = automated.filter((id) => !dod.has(id));
+  out.push("## 受入IDごとの結果", "");
+  out.push("### DoD", "");
+  if (dodIds.length === 0) out.push("なし", "");
+  else {
+    out.push("| 受入ID | 確認する内容（要約） | 検証する規則ID | 先に書いたとき（TDD） | 実装後 |");
+    out.push("| --- | --- | --- | --- | --- |");
+    for (const id of dodIds) {
+      const ruleList = accRules.get(id).join(", ") || "（根拠なし）";
+      out.push(`| ${id} | ${content(id)} | ${ruleList} | ${logResult(red, id)} | ${logResult(latest, id)} |`);
+    }
+    out.push("");
   }
-  out.push("");
+  // 壊してはいけないもの：折りたたむ。表は消さない（何のテストを実施したかをPR上に残す）。規則IDの列は設けない
+  const keepResults = keepIds.map((id) => logResult(latest, id));
+  const passed = keepResults.filter((r) => r === "成功").length;
+  const keepSummary = keepIds.length === 0 ? "なし" : passed === keepIds.length ? `${keepIds.length}件・全件成功` : `${keepIds.length}件・成功 ${passed}件・それ以外 ${keepIds.length - passed}件`;
+  out.push("<details>", `<summary>壊してはいけない（${keepSummary}）</summary>`, "");
+  if (keepIds.length === 0) out.push("なし", "");
+  else {
+    out.push("| 受入ID | 確認する内容（要約） | 実装後 |");
+    out.push("| --- | --- | --- |");
+    keepIds.forEach((id, i) => out.push(`| ${id} | ${content(id)} | ${keepResults[i]} |`));
+    out.push("");
+  }
+  out.push("</details>", "");
   out.push("## 手動確認の受入ID（参考。PR本文の「Godotでの手動確認」に書く）", "");
   out.push(manual.length === 0 ? "なし" : manual.map((id) => `- ${id}（${dod.has(id) ? "DoD" : "壊してはいけない"}）`).join("\n"), "");
 
@@ -357,7 +377,8 @@ function check(args) {
     const body = readFileSync(args.prBody, "utf8");
     const abbreviated = [...body.matchAll(/[A-Z]{3}-\d{3}(?:\s*[,、]\s*\d{3}(?!\d)|〜)/g)].map((m) => m[0]);
     for (const a of abbreviated) errors.push(`IDの省略表記がある: ${a}`);
-    const outside = body.replace(/## 対応した規則ID[\s\S]*?(?=\n## )/, "");
+    // 壊してはいけないものの折りたたんだ表は対象外。要約に規則IDが入っていても、参照のみの表に載せない（PR本文を長くしない）
+    const outside = body.replace(/<summary>壊してはいけない[\s\S]*?<\/details>/, "").replace(/## 対応した規則ID[\s\S]*?(?=\n## )/, "");
     for (const m of outside.matchAll(/[A-Z]{3}-\d{3}/g)) if (!tableIds.has(m[0])) errors.push(`本文に現れるIDが「対応した規則ID」の表にない: ${m[0]}`);
   }
   const unique = [...new Set(errors)];
