@@ -1,0 +1,194 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/guild.gd" id="1_guild"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/screen_background.tscn" id="2_bg"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/gold_header.tscn" id="3_header"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/list_detail.tscn" id="4_list"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/error_notice.tscn" id="5_notice"]
+
+[node name="Guild" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_guild")
+
+[node name="Background" parent="." instance=ExtResource("2_bg")]
+layout_mode = 1
+
+[node name="Body" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopBar" type="HBoxContainer" parent="Body"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Body/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeadingLabel"
+text = "ギルド"
+
+[node name="GoldHeader" parent="Body/TopBar" instance=ExtResource("3_header")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Views" type="Control" parent="Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MainView" parent="Body/Views" instance=ExtResource("4_list")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="NameView" type="CenterContainer" parent="Body/Views"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="VBoxContainer" parent="Body/Views/NameView"]
+layout_mode = 2
+theme_type_variation = &"StackL"
+
+[node name="Heading" type="Label" parent="Body/Views/NameView/Box"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "冒険者の登録"
+horizontal_alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="Body/Views/NameView/Box"]
+layout_mode = 2
+
+[node name="Inner" type="PanelContainer" parent="Body/Views/NameView/Box/Panel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Fields" type="VBoxContainer" parent="Body/Views/NameView/Box/Panel/Inner"]
+layout_mode = 2
+
+[node name="Prompt" type="Label" parent="Body/Views/NameView/Box/Panel/Inner/Fields"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="NameEdit" type="LineEdit" parent="Body/Views/NameView/Box/Panel/Inner/Fields"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(480, 48)
+layout_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Body/Views/NameView/Box"]
+layout_mode = 2
+alignment = 1
+
+[node name="NameNext" type="Button" parent="Body/Views/NameView/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "次へ"
+
+[node name="NameBack" type="Button" parent="Body/Views/NameView/Box/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "戻る"
+
+[node name="JobView" parent="Body/Views" instance=ExtResource("4_list")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PortraitView" type="VBoxContainer" parent="Body/Views"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Heading" type="Label" parent="Body/Views/PortraitView"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "顔を選ぶ"
+
+[node name="Panel" type="PanelContainer" parent="Body/Views/PortraitView"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Inner" type="PanelContainer" parent="Body/Views/PortraitView/Panel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Center" type="CenterContainer" parent="Body/Views/PortraitView/Panel/Inner"]
+layout_mode = 2
+
+[node name="PortraitGrid" type="GridContainer" parent="Body/Views/PortraitView/Panel/Inner/Center"]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 5
+
+[node name="Bottom" type="HBoxContainer" parent="Body/Views/PortraitView"]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Body/Views/PortraitView/Bottom"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="PortraitBack" type="Button" parent="Body/Views/PortraitView/Bottom"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "戻る"
+
+[node name="PendingView" type="CenterContainer" parent="Body/Views"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Box" type="VBoxContainer" parent="Body/Views/PendingView"]
+layout_mode = 2
+theme_type_variation = &"StackL"
+
+[node name="Heading" type="Label" parent="Body/Views/PendingView/Box"]
+layout_mode = 2
+theme_type_variation = &"HeadingLabel"
+text = "準備中"
+horizontal_alignment = 1
+
+[node name="PendingBack" type="Button" parent="Body/Views/PendingView/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+text = "戻る"
+
+[node name="Notice" parent="Body" instance=ExtResource("5_notice")]
+unique_name_in_owner = true
+layout_mode = 2

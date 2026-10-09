@@ -61,6 +61,11 @@ func _g01(t) -> void:
 	# 20人までは登録できる。登録は無料（PTY-000）。IDは1から単調に増える（PTY-006, GLS-403）
 	for i in ROSTER_LIMIT:
 		var job: Dictionary = jobs[i % jobs.size()]
+		# 登録の入口の可否は、名前などを決める前に、上限だけで確かめられる（PTY-012）。試算は何も変えない
+		var entry: Dictionary = service.can_start_register(session)
+		t.check("G01", true, entry.ok)
+		t.check("G01", &"", entry.error_code)
+		t.check("G01", i, session.characters.size())
 		var result: Dictionary = service.register(session, "冒険者%d" % i, StringName(job.id), _portrait(i))
 		t.check("G01", true, result.ok)
 		t.check("G01", &"", result.error_code)
@@ -76,6 +81,10 @@ func _g01(t) -> void:
 	var before := _snapshot(session)
 	var notices_before: int = recorder.kinds.size()
 	var warrior := StringName(jobs[0].id)
+	var entry_full: Dictionary = service.can_start_register(session)
+	t.check("G01", false, entry_full.ok)
+	t.check("G01", ROSTER_FULL, entry_full.error_code)
+	t.check("G01", {}, entry_full.changes)
 	var preview: Dictionary = service.can_register(session, "二十一人目", warrior, _portrait(0))
 	t.check("G01", false, preview.ok)
 	t.check("G01", ROSTER_FULL, preview.error_code)
@@ -230,19 +239,32 @@ func _p01(t) -> void:
 	for raw in accepted:
 		var expected: String = accepted[raw]
 		t.check("P01", expected, service_script.normalize_name(raw))
+		# 名前だけの試算は、除去した後の名前を返す（作成の最初の手順で、職業と顔の前に確かめる。PTY-003）
+		var named: Dictionary = service.can_name(raw)
+		t.check("P01", true, named.ok)
+		t.check("P01", &"", named.error_code)
+		t.check("P01", {"name": expected}, named.changes)
 		var preview: Dictionary = service.can_register(session, raw, job, _portrait(0))
 		t.check("P01", true, preview.ok)
 		t.check("P01", &"", preview.error_code)
+		# 試算は、登録後の行き先（パーティか待機。PTY-013）と費用（無料。PTY-000）も返す。確定した結果と一致する
+		var party_before: int = session.party_ids.size()
+		t.check("P01", {"name": expected, "joined_party": party_before < PARTY_LIMIT, "cost": 0}, preview.changes)
 		# 試算は何も変えない
 		t.check("P01", registered, session.characters.size())
 		var result: Dictionary = service.register(session, raw, job, _portrait(0))
 		t.check("P01", true, result.ok)
+		t.check("P01", preview.changes.joined_party, result.changes.joined_party)
 		t.check("P01", expected, session.characters.back().name)
 		registered += 1
 	t.check("P01", accepted.size(), session.characters.size())
 
 	var before := _snapshot(session)
 	for raw in rejected:
+		var named: Dictionary = service.can_name(raw)
+		t.check("P01", false, named.ok)
+		t.check("P01", INVALID_NAME, named.error_code)
+		t.check("P01", {}, named.changes)
 		var preview: Dictionary = service.can_register(session, raw, job, _portrait(0))
 		t.check("P01", false, preview.ok)
 		t.check("P01", INVALID_NAME, preview.error_code)

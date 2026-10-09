@@ -1,0 +1,77 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/components/confirm_dialog.gd" id="1_dialog"]
+
+[node name="ConfirmDialog" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_dialog")
+
+[node name="Dim" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_type_variation = &"ScreenScrim"
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Backing" type="PanelContainer" parent="Center"]
+layout_mode = 2
+theme_type_variation = &"ScreenBase"
+
+[node name="Panel" type="PanelContainer" parent="Center/Backing"]
+layout_mode = 2
+
+[node name="Inner" type="PanelContainer" parent="Center/Backing/Panel"]
+layout_mode = 2
+theme_type_variation = &"PanelInner"
+
+[node name="Body" type="VBoxContainer" parent="Center/Backing/Panel/Inner"]
+layout_mode = 2
+theme_type_variation = &"StackL"
+
+[node name="Message" type="Label" parent="Center/Backing/Panel/Inner/Body"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+mouse_filter = 2
+autowrap_mode = 3
+
+[node name="Details" type="Label" parent="Center/Backing/Panel/Inner/Body"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"NoteLabel"
+autowrap_mode = 3
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Backing/Panel/Inner/Body"]
+layout_mode = 2
+alignment = 1
+
+[node name="Yes" type="Button" parent="Center/Backing/Panel/Inner/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "はい"
+
+[node name="No" type="Button" parent="Center/Backing/Panel/Inner/Body/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 40)
+layout_mode = 2
+text = "いいえ"
