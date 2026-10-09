@@ -320,9 +320,11 @@ GDScript と Godot を初めて扱うユーザーが、PRをレビューする�
 
 1. 対象を確かめる：`git diff --name-only --diff-filter=AMR -M origin/main...HEAD -- '*.gd' ':(exclude)tests'`（`tests/` は解説しない）。対象がなければ資料を作らず、手順10で「対象の .gd なし」と報告する
 2. `CODE_GUIDE_DIR` と `node --version` を確かめる。どちらかが使えない場合は、資料を作らずに手順10で理由を報告する（作ったことにしない）
+   - 習得済みの語の個人ファイルを確かめる。パスは `node .claude/skills/issue-implementing/scripts/build-code-guide.mjs --show-known-terms-path true` で得る。**ファイルがなければ、ユーザーに「習得済みの語の個人ファイルがありません。`templates/known-terms-personal.md` から作りますか」と確認する。** 承認されたら雛形をそのパスへコピーして作る。断られた場合は、個人の習得済みの語なしで進める（スクリプトが警告を出す）。このファイルはリポジトリの外にあり、コミットしない
+   - ユーザーが「X は習得した」と伝えたら、個人ファイルの末尾に `` - `X` `` の1行を追記する（コードに現れるとおりの形。`criteria/known-terms.md` の書式）。コミットもpushもしない。リポジトリの `criteria/known-terms.md` には書かない
 3. `git diff origin/main...HEAD` を `cycle-<c>/code-guide-diff.patch` に保存する
 4. `code-explainer` を呼び出す。プロンプトには次の絶対パスと値を書く
-   - `criteria/code-guide.md`、`criteria/known-terms.md`、`templates/code-guide-notes.md`、`criteria/context7.md`
+   - `criteria/code-guide.md`、`criteria/known-terms.md`、習得済みの語の個人ファイル（2で得た絶対パス）、`templates/code-guide-notes.md`、`criteria/context7.md`
    - Issue本文（最後のラウンドの `issue.md`）、`code-guide-diff.patch`、`context7-log.md`
    - 対象の `.gd` の一覧
    - 検証コマンド（`node .claude/skills/issue-implementing/scripts/build-code-guide.mjs --notes <出力先> --validate-only true [--cycle <c>] [--cycle-base <値>]`）。`code-explainer` が自分で実行し、誤りを直してから返す
@@ -338,7 +340,7 @@ GDScript と Godot を初めて扱うユーザーが、PRをレビューする�
    - `--cycle-base` は2サイクル目以降に、`--pr` はPRが既にある場合（レビュー対応モード）に付ける
 7. 終了コードが1（検証の誤り）の場合は、ログの「誤り」の行を同じ `code-explainer` に SendMessage で渡して直させ、6をやり直す。**やり直しは2回まで**とし、それでも誤りが残れば資料を書き出さず、手順10で報告する。`code-explainer` が自分で検証しているため、通常はここで誤りは出ない
 
-スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、習得済みの語（`criteria/known-terms.md`）の解説が残っていないこと、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
+スクリプトは、対象の `.gd` の過不足、行番号と行の語句の一致、節が変更した行を覆っていること、言語・エンジンの解説の出典（Godot 4.5 の公式ドキュメント）または未確認の明示、習得済みの語（個人ファイルと `criteria/known-terms.md`）の解説が残っていないこと、設計の解説の規則IDが設計書にあることを検証する。解説の文章そのものの正しさは検証しないため、未確認の解説の件数を手順10で報告する。
 
 ### 9. PRを作成する
 

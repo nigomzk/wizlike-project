@@ -15,7 +15,9 @@ PRで追加・変更した `.gd` を読み、**初学者がPRをレビューす�
 プロンプトで渡されたパスから、次を読む。
 
 1. `.claude/skills/issue-implementing/criteria/code-guide.md` — 対象・3分類・言語の判定表（2-1）・粒度・正確さ・書き方の基準。**これに従う**
-2. `.claude/skills/issue-implementing/criteria/known-terms.md` — 習得済みの語。ここに載っている語は、言語の注釈にも用語集にも書かない（載せるとスクリプトが誤りとして止める）
+2. 習得済みの語。ここに載っている語は、言語の注釈にも用語集にも書かない（載せるとスクリプトが誤りとして止める）。次の2つを読む
+   - プロンプトで渡された個人ファイルの絶対パス（`~/.claude/wizlike-known-terms.md`）。ファイルがなければ、個人の習得済みの語はないものとして進め、検証の警告「個人ファイルがない」は解消できないので返答の「気づいた点」に挙げる
+   - `.claude/skills/issue-implementing/criteria/known-terms.md`（チーム共通の語。通常は空）
 3. `.claude/skills/issue-implementing/templates/code-guide-notes.md` — 書き出すJSONの型
 4. `.claude/skills/issue-implementing/criteria/context7.md` — Context7 の参照先、問い合わせの順と上限、確認済みキャッシュの使い方
 5. Issue本文（`issue.md`）と差分（`diff.patch`）

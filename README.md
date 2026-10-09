@@ -47,6 +47,32 @@ $env:GODOT = "<Godot 4.5.1 の実行ファイル>"
 - テストはエディターを起動しない
 - `-- --files=res://a.gd,res://b.gd` で、実行するテストファイルを差し替えられる（TST-109）。ランナーの検証（T01〜T04）が、`tests/fixtures/` のフィクスチャを子プロセスで実行するために使う
 
+## Claude Code の個人設定
+
+`/issue-implementing` のコード解説では、習得済みの GDScript の語を解説から外せる。一覧は人ごとに違うため、リポジトリではなく個人ファイルに書く。
+
+| 項目 | 内容 |
+| --- | --- |
+| 場所 | `~/.claude/wizlike-known-terms.md`（Windows では `%USERPROFILE%\.claude\wizlike-known-terms.md`） |
+| 作り方 | `/issue-implementing` を実行すると、ファイルがなければ Claude が作るかを確認する。雛形は `.claude/skills/issue-implementing/templates/known-terms-personal.md` |
+| 追記 | 「`signal` は習得した」のように Claude に伝える。自分で1行ずつ書いてもよい |
+| git | 管理しない。コミットもpushも不要 |
+
+ファイルがなくても動くが、習得済みの語は何も除外されず、検証で警告が出る。書式の詳細は [known-terms.md](.claude/skills/issue-implementing/criteria/known-terms.md)。
+
+### コード解説の出力先
+
+`/issue-implementing` が作るコード解説の資料（HTML）は、リポジトリの外のフォルダに `issue-<N>.html` として書き出す。フォルダは環境変数 `CODE_GUIDE_DIR` で指定する。
+
+```powershell
+[Environment]::SetEnvironmentVariable("CODE_GUIDE_DIR", "<出力先フォルダ>", "User")
+```
+
+- 設定後に、Claude Code（デスクトップアプリ）とターミナルを開き直す。開いたままだと、新しい値が見えない
+- 未設定のままでも、Claude がパスを尋ねる。ただし、そのセッションの資料の出力先にしか使われない
+- 資料はコミットしない。リポジトリは公開されているため、PR本文にもパスを書かない
+- Node.js が必要（資料を作るスクリプトが `node` で動く）
+
 ## 版
 
 | 対象 | 版 |

@@ -2,7 +2,22 @@
 
 読み手が理解できたと判断した GDScript の記法。ここに載っている語は、コード解説の資料の**言語（`language`）の注釈にも用語集にも書かない**。
 
-- 追記は人間が行う。外したい語を、コードに現れるとおりの形で1行ずつ書く
+## 置き場所
+
+習得済みの語は人ごとに違うため、**一覧は個人ファイルに書く。このファイル（git管理）には書かない。**
+
+| 種類 | 場所 | 用途 |
+| --- | --- | --- |
+| 個人ファイル | `~/.claude/wizlike-known-terms.md`（Windows では `%USERPROFILE%\.claude\wizlike-known-terms.md`） | 自分が習得した語。リポジトリの外なので、コミットもpushも要らず、worktree や別のcloneでも効く |
+| このファイル | `criteria/known-terms.md` | 書式の説明。チーム全員が外してよいと合意した語があれば、下の区切り線より後に書く（通常は空） |
+
+- 個人ファイルの実際のパスは `node .claude/skills/issue-implementing/scripts/build-code-guide.mjs --show-known-terms-path true` で分かる
+- 個人ファイルがなければ、個人の習得済みの語は何も除外されず、スクリプトが警告を出す。雛形は `templates/known-terms-personal.md`（コピーして使う。`issue-implementing` を実行すると、Claude が作るかを確認する）
+- 「X は習得した」と Claude に伝えれば、Claude が個人ファイルに追記する。自分で開いて書いてもよい
+
+## 書式（個人ファイルもこのファイルも同じ）
+
+- 追記は人間の指示で行う。外したい語を、コードに現れるとおりの形で1行ずつ書く
 - 戻したい語は、その行を消す
 - 対象は言語の注釈と用語集だけ。エンジンと設計の解説は、ここに書いても外れない
 - スクリプト（`scripts/build-code-guide.mjs`）が、言語の注釈の `match` と用語集の `term` にこの語が含まれていないかを確かめる。含まれていれば誤りとして止まる
@@ -17,11 +32,3 @@
 
 ---
 
-- `@onready`
-- `class_name`
-- `extends`
-- `:=`
-- `Array`
-- `as`
-- `is`
-- `preload`

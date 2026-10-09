@@ -14,7 +14,8 @@
 // 終了コード: 0 = 書き出した（警告は出力に出る） / 1 = 検証の誤りがある / 2 = 引数や git の誤り
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,6 +25,8 @@ const DOCS_PREFIX = "https://docs.godotengine.org/en/4.5/";
 const RULE_ID = /^[A-Z]+-\d{3}$/;
 /** 行の注釈の件数の目安。変更した行（空行を除く）に対する割合 */
 const NOTE_RATIO_LIMIT = 0.3;
+/** 習得済みの語の個人ファイル。人ごとに違うため、リポジトリの外（ホーム配下）に置く。worktree でも効く */
+const PERSONAL_TERMS_PATH = join(homedir(), ".claude", "wizlike-known-terms.md");
 
 function parseArgs(argv) {
   const args = { base: "origin/main", head: "HEAD", cycle: "1" };
@@ -36,6 +39,8 @@ function parseArgs(argv) {
     args[name] = value;
   }
   args.validateOnly = args.validateOnly === "true";
+  args.showKnownTermsPath = args.showKnownTermsPath === "true";
+  if (args.showKnownTermsPath) return args;
   if (!args.notes || (!args.out && !args.validateOnly)) usage("--notes と --out は必須（--validate-only true のときは --out は不要）");
   args.cycle = Number(args.cycle);
   if (!Number.isInteger(args.cycle) || args.cycle < 1) usage("--cycle は1以上の整数");
@@ -47,6 +52,7 @@ function usage(message) {
   console.error("引数の誤り: " + message);
   console.error("使い方: node build-code-guide.mjs --notes <JSON> --out <HTML> [--cycle <c>] [--cycle-base <sha>] [--base origin/main] [--head HEAD] [--branch <名前>] [--pr <番号>]");
   console.error("        node build-code-guide.mjs --notes <JSON> --validate-only true [--cycle <c>] [--cycle-base <sha>]");
+  console.error("        node build-code-guide.mjs --show-known-terms-path true   （習得済みの語の個人ファイルのパスを表示する）");
   process.exit(2);
 }
 
@@ -82,11 +88,10 @@ function addedLines(from, to, path) {
   return set;
 }
 
-// criteria/known-terms.md の「- `語`」の行から、習得済みの語を取り出す。コードブロック（書式の例）の中は読まない。
+// 習得済みの語は、チーム共通の criteria/known-terms.md と、個人ファイル（PERSONAL_TERMS_PATH）の両方から取る。
+// 「- `語`」の行だけを読み、コードブロック（書式の例）の中は読まない。
 // 英数字と _ だけの語は単語として、それ以外（@onready や := など）は文字列として照合する
-function loadKnownTerms() {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const text = readFileSync(join(here, "..", "criteria", "known-terms.md"), "utf8");
+function parseTermLines(text) {
   const terms = [];
   let inFence = false;
   for (const line of text.split("\n")) {
@@ -98,15 +103,28 @@ function loadKnownTerms() {
     const m = /^- `([^`]+)`\s*$/.exec(line.trim());
     if (m) terms.push(m[1]);
   }
-  return terms.map((term) => {
+  return terms;
+}
+
+function loadKnownTerms() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const shared = parseTermLines(readFileSync(join(here, "..", "criteria", "known-terms.md"), "utf8"));
+  const personalFound = existsSync(PERSONAL_TERMS_PATH);
+  const personal = personalFound ? parseTermLines(readFileSync(PERSONAL_TERMS_PATH, "utf8")) : [];
+  const terms = [...new Set([...shared, ...personal])].map((term) => {
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const pattern = /^[A-Za-z0-9_]+$/.test(term) ? "(?<![A-Za-z0-9_])" + escaped + "(?![A-Za-z0-9_])" : escaped;
     return { term, re: new RegExp(pattern) };
   });
+  return { terms, personalFound };
 }
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.showKnownTermsPath) {
+    console.log(PERSONAL_TERMS_PATH);
+    return;
+  }
   const errors = [];
   const warnings = [];
   const err = (where, message) => errors.push(where + ": " + message);
@@ -146,10 +164,11 @@ function main() {
   if (!Number.isInteger(notes.issue)) err("issue", "Issue番号が整数でない");
 
   // 習得済みの語（criteria/known-terms.md）は、言語の注釈にも用語集にも書かない
-  const knownTerms = loadKnownTerms();
+  const { terms: knownTerms, personalFound } = loadKnownTerms();
+  if (!personalFound) warn("習得済みの語", "個人ファイルがない（" + PERSONAL_TERMS_PATH + "）。個人の習得済みの語は何も除外していない。作り方は criteria/known-terms.md");
   const checkKnown = (where, text) => {
     const hit = knownTerms.find((k) => k.re.test(text || ""));
-    if (hit) err(where, "習得済みの語「" + hit.term + "」の解説は書かない（criteria/known-terms.md）。この解説を外す");
+    if (hit) err(where, "習得済みの語「" + hit.term + "」の解説は書かない（個人ファイルまたは criteria/known-terms.md）。この解説を外す");
   };
 
   // 用語集
