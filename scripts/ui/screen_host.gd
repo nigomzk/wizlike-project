@@ -10,6 +10,8 @@ const PLACEHOLDER_SCENE := "res://scenes/ui/placeholder.tscn"
 const SCREEN_SCENES := {
 	GameFlowScript.State.BOOT_ERROR: "res://scenes/ui/boot_error.tscn",
 	GameFlowScript.State.TITLE: "res://scenes/ui/title.tscn",
+	GameFlowScript.State.NEW_GAME: "res://scenes/ui/text_screen.tscn",
+	GameFlowScript.State.TOWN: "res://scenes/ui/town.tscn",
 	GameFlowScript.State.SETTINGS: "res://scenes/ui/settings.tscn",
 }
 

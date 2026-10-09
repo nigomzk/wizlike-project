@@ -11,7 +11,7 @@ func setup(flow: Node) -> void:
 
 
 func _ready() -> void:
-	_buttons[0].pressed.connect(func(): _flow.request_new_game())
+	_buttons[0].pressed.connect(func(): _flow.new_game())
 	_buttons[1].pressed.connect(func(): _flow.open_load())
 	_buttons[2].pressed.connect(func(): _flow.open_settings())
 	_buttons[3].pressed.connect(func(): _flow.quit_app())

@@ -54,17 +54,16 @@ func _f08(t) -> void:
 	flow.rng_service = rng
 	t.root.add_child(flow)
 
-	# NEW_GAME に入るまでは、セッションを作らない（FLW-002, FLW-108）
+	# TITLE の間はセッションがない。「はじめから」で NEW_GAME に入る時点で、導入の表示より前に作る（FLW-002, FLW-108）
 	t.check("F08", flow_script.State.TITLE, flow.state)
-	t.check("F08", false, flow.new_game())
-	t.check("F08", false, flow.has_session())
-	t.check("F08", true, flow.request_new_game())
 	t.check("F08", false, flow.has_session())
 
 	var states_before := _rng_states(rng)
 	t.check("F08", true, flow.new_game())
 	t.check("F08", true, flow.has_session())
 	t.check("F08", flow_script.State.NEW_GAME, flow.state)
+	# NEW_GAME からは作り直せない
+	t.check("F08", false, flow.new_game())
 	var session = flow.session
 	t.check("F08", true, session != null and session.get_script() == load(SESSION_SCRIPT))
 	if session == null:
